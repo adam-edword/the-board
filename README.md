@@ -8,7 +8,7 @@ weekly football picks for the group. replaces the whiteboard.
 - scores and results fill in automatically, 1 point per correct pick
 - "the board" tab is the whiteboard grid, plus season standings
 
-built with next.js + supabase, hosted on vercel. all free at this size.
+built with next.js + supabase, self-hosted with docker on coolify.
 
 ## setup
 
@@ -22,12 +22,19 @@ the schema in `supabase/migrations/0001_init.sql` is already applied to the "the
    - authorized redirect uri: `https://sdryfdrwpnzxqaajahdu.supabase.co/auth/v1/callback`
 4. copy the client id + secret into supabase → authentication → sign in / providers → google, enable it
 
-### 3. deploy on vercel
-1. import this repo at [vercel.com/new](https://vercel.com/new)
-2. add the env vars from `.env.example` (the secret key is in supabase → project settings → api keys)
-3. deploy, then in supabase → authentication → url configuration:
-   - site url: your vercel url (e.g. `https://the-board.vercel.app`)
-   - redirect urls: add `https://the-board.vercel.app/**` (and `http://localhost:3000/**` for local dev)
+### 3. deploy on coolify
+1. coolify → new resource → public/private repo → this repo, branch you want
+2. build pack: **dockerfile** (uses the `Dockerfile` in the repo), port **3000**
+3. set a domain (e.g. `https://board.example.com`), coolify handles https
+4. env vars (all runtime, none need "build variable" checked):
+   - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (values in `.env.example`)
+   - `SUPABASE_SECRET_KEY` from supabase → project settings → api keys
+   - `SITE_URL` = your domain from step 3
+5. deploy, then in supabase → authentication → url configuration:
+   - site url: your domain
+   - redirect urls: add `https://board.example.com/**` (and `http://localhost:3000/**` for local dev)
+
+no cron needed. scores sync whenever someone has the board open, and upcoming kickoff times get re-checked every 6 hours the same way.
 
 ### 4. make yourself admin
 sign in once, then run this in the supabase sql editor:
@@ -42,7 +49,7 @@ after that, approve everyone else from the admin page.
 1. admin → "new week"
 2. flip between nfl / college, pick the week, hit "add" on the games you want
 3. send the link to the group
-4. scores update on their own whenever someone has the board open (and once a day via cron)
+4. scores update on their own whenever someone has the board open
 
 ## local dev
 ```bash

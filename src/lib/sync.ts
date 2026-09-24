@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { fetchGame, type League } from "@/lib/espn";
 
 const MIN_INTERVAL_MS = 60_000;
+const FULL_INTERVAL_MS = 6 * 3600_000;
 
 /**
  * pulls fresh scores from espn for any game that isn't final yet.
@@ -23,8 +24,20 @@ export async function syncScores({ force = false } = {}) {
     .select("id");
   if (!claimed?.length) return { skipped: "throttled" };
 
-  // normal runs refresh games that should have started. forced runs (admin
-  // button / daily cron) also refresh upcoming games to catch time changes.
+  // every few hours also re-check upcoming games so flexed / moved kickoff
+  // times get picked up (no cron needed, piggybacks on page loads)
+  if (!force) {
+    const { data: full } = await db
+      .from("sync_state")
+      .update({ last_full_sync_at: new Date().toISOString() })
+      .eq("id", 1)
+      .lte("last_full_sync_at", new Date(Date.now() - FULL_INTERVAL_MS).toISOString())
+      .select("id");
+    force = !!full?.length;
+  }
+
+  // normal runs refresh games that should have started. full runs also
+  // refresh upcoming games to catch time changes.
   const horizon = new Date(Date.now() + 7 * 24 * 3600_000).toISOString();
   const { data: games, error } = await db
     .from("games")

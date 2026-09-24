@@ -1,8 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  );
+// url + key are passed down from the server so nothing has to be baked in at build time
+export function createClient(url: string, key: string) {
+  return createBrowserClient(url, key);
 }

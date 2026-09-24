@@ -12,7 +12,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
         <h1 className="text-4xl font-bold tracking-tight">the board</h1>
         <p className="mt-2 text-zinc-400">weekly picks. no more whiteboard.</p>
       </div>
-      <GoogleButton />
+      <GoogleButton supabaseUrl={process.env.SUPABASE_URL!} supabaseKey={process.env.SUPABASE_PUBLISHABLE_KEY!} />
       {error && <p className="text-sm text-red-400">sign in didn&apos;t work, try again</p>}
     </div>
   );

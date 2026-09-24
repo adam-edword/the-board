@@ -1,4 +1,5 @@
-export const TIME_ZONE = process.env.NEXT_PUBLIC_TIME_ZONE || "America/Chicago";
+// kickoff times are shown in central time
+export const TIME_ZONE = "America/Chicago";
 
 export function kickoffLabel(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
