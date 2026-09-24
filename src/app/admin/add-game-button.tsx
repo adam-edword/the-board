@@ -1,18 +1,36 @@
 "use client";
 
 import { useTransition } from "react";
+import { CheckIcon, Loader2Icon, PlusIcon } from "lucide-react";
+import { toast } from "sonner";
 import { addGame } from "@/app/actions";
+import { Button } from "@/components/ui/button";
 
 export function AddGameButton({ added, args }: { added: boolean; args: Parameters<typeof addGame> }) {
   const [pending, start] = useTransition();
-  if (added) return <span className="w-14 text-center text-xs text-lime-400">added</span>;
+  if (added) {
+    return (
+      <Button size="sm" variant="ghost" disabled className="w-16 text-win">
+        <CheckIcon /> added
+      </Button>
+    );
+  }
   return (
-    <button
-      onClick={() => start(() => addGame(...args))}
+    <Button
+      size="sm"
+      className="w-16"
       disabled={pending}
-      className="w-14 rounded-lg bg-white py-1 text-xs font-medium text-zinc-900 disabled:opacity-50"
+      onClick={() =>
+        start(async () => {
+          try {
+            await addGame(...args);
+          } catch {
+            toast.error("couldn't add that game, try again");
+          }
+        })
+      }
     >
-      {pending ? "…" : "add"}
-    </button>
+      {pending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />} add
+    </Button>
   );
 }

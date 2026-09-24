@@ -1,33 +1,30 @@
 import { redirect } from "next/navigation";
 import { getMe } from "@/lib/data";
-import { signOut, updateName } from "@/app/actions";
+import { updateName } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default async function MePage() {
   const me = await getMe();
   if (!me) redirect("/login");
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">you</h1>
-      <form action={updateName} className="space-y-2">
-        <label htmlFor="name" className="block text-sm text-zinc-400">
-          name on the board
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="name"
-            name="name"
-            defaultValue={me.name}
-            maxLength={40}
-            className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2"
-          />
-          <button className="rounded-lg bg-white px-4 py-2 font-medium text-zinc-900">save</button>
-        </div>
-      </form>
-      <p className="text-sm text-zinc-500">signed in as {me.email}</p>
-      <form action={signOut}>
-        <button className="rounded-lg border border-zinc-700 px-4 py-2 text-sm">sign out</button>
-      </form>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">your name on the board</CardTitle>
+        <CardDescription>signed in as {me.email}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={updateName} className="space-y-2">
+          <Label htmlFor="name">display name</Label>
+          <div className="flex gap-2">
+            <Input id="name" name="name" defaultValue={me.name} maxLength={40} />
+            <Button type="submit">save</Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

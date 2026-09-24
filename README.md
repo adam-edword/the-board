@@ -15,11 +15,12 @@ built with next.js + supabase, self-hosted with docker on coolify.
 ### 1. supabase (done)
 the schema in `supabase/migrations/0001_init.sql` is already applied to the "the board" project.
 
-### 2. google sign-in
+### 2. google sign-in (google identity services + supabase id token)
 1. go to [google cloud console](https://console.cloud.google.com/) → create a project
 2. apis & services → oauth consent screen → external, fill in app name + your email, publish it
 3. credentials → create credentials → oauth client id → web application
-   - authorized redirect uri: `https://sdryfdrwpnzxqaajahdu.supabase.co/auth/v1/callback`
+   - authorized javascript origins: `https://theboard.eddtv.org` (and `http://localhost:3000` for dev)
+   - no redirect uri needed, the button hands the id token straight to supabase
 4. copy the client id + secret into supabase → authentication → sign in / providers → google, enable it
 
 ### 3. deploy on coolify

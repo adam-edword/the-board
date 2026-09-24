@@ -1,13 +1,18 @@
 "use client";
 
-export function ConfirmButton({ message, className, children }: {
-  message: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
+import { Button } from "@/components/ui/button";
+
+export function ConfirmButton({ message, children }: { message: string; children: React.ReactNode }) {
   return (
-    <button className={className} onClick={(e) => { if (!confirm(message)) e.preventDefault(); }}>
+    <Button
+      type="submit"
+      variant="destructive"
+      size="sm"
+      onClick={(e) => {
+        if (!confirm(message)) e.preventDefault();
+      }}
+    >
       {children}
-    </button>
+    </Button>
   );
 }

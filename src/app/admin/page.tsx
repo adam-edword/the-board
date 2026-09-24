@@ -1,4 +1,10 @@
 import Link from "next/link";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, RefreshCwIcon, TrashIcon, XIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchSchedule, type League } from "@/lib/espn";
@@ -56,181 +62,206 @@ export default async function AdminPage(props: PageProps<"/admin">) {
 
   const thisYear = new Date().getFullYear();
 
+  const chip = (active: boolean) => (active ? "secondary" : "ghost") as "secondary" | "ghost";
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">admin</h1>
+
       {/* ------------------------------------------------ weeks */}
-      <section className="space-y-4">
-        <h1 className="text-2xl font-bold">admin</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>weeks</CardTitle>
+          <CardDescription>make a new week, then add games to it below.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form action={createWeek} className="flex flex-wrap gap-2">
+            <Input name="label" defaultValue={`week ${weeks.length + 1}`} className="min-w-32 flex-1" aria-label="week name" />
+            <Input name="season" type="number" defaultValue={week?.season ?? thisYear} className="w-24" aria-label="season" />
+            <Button type="submit">
+              <PlusIcon /> new week
+            </Button>
+          </form>
 
-        <form action={createWeek} className="flex flex-wrap gap-2">
-          <input
-            name="label"
-            placeholder={`week ${weeks.length + 1}`}
-            defaultValue={`week ${weeks.length + 1}`}
-            className="flex-1 min-w-32 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-          />
-          <input
-            name="season"
-            type="number"
-            defaultValue={week?.season ?? thisYear}
-            className="w-24 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-          />
-          <button className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900">new week</button>
-        </form>
-
-        {week && (
-          <div className="flex flex-wrap items-center gap-2">
-            <WeekPicker weeks={weeks} current={week.id} basePath="/admin" />
-            <form action={renameWeek.bind(null, week.id)} className="flex gap-2">
-              <input
-                name="label"
-                defaultValue={week.label}
-                className="w-32 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
-              />
-              <button className="rounded-lg border border-zinc-700 px-3 py-2 text-sm">rename</button>
-            </form>
-            <form action={refreshScores}>
-              <button className="rounded-lg border border-zinc-700 px-3 py-2 text-sm">refresh scores</button>
-            </form>
-          </div>
-        )}
-      </section>
+          {week && (
+            <>
+              <Separator />
+              <div className="flex flex-wrap items-center gap-2">
+                <WeekPicker weeks={weeks} current={week.id} basePath="/admin" />
+                <form action={renameWeek.bind(null, week.id)} className="flex gap-2">
+                  <Input name="label" defaultValue={week.label} className="w-32" aria-label="rename week" />
+                  <Button type="submit" variant="outline">rename</Button>
+                </form>
+                <form action={refreshScores}>
+                  <Button type="submit" variant="outline">
+                    <RefreshCwIcon /> refresh scores
+                  </Button>
+                </form>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {week && weekData && (
         <>
           {/* ------------------------------------------------ games in this week */}
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">
-              games in {week.label} <span className="text-zinc-500">({weekData.games.length})</span>
-            </h2>
-            {weekData.games.length === 0 && <p className="text-sm text-zinc-500">none yet, add some below.</p>}
-            <ul className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-              {weekData.games.map((g) => (
-                <li key={g.id} className="flex items-center gap-3 p-3 text-sm">
-                  <span className="w-12 text-xs uppercase text-zinc-500">{g.league === "nfl" ? "nfl" : "cfb"}</span>
-                  <span className="flex-1">
-                    {g.away_abbr} @ {g.home_abbr}
-                    <span className="ml-2 text-xs text-zinc-500">{kickoffLabel(g.kickoff)}</span>
-                  </span>
-                  <form action={removeGame.bind(null, g.id)}>
-                    <button className="text-xs text-red-400">remove</button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                games in {week.label} <span className="text-muted-foreground">({weekData.games.length})</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {weekData.games.length === 0 ? (
+                <p className="text-sm text-muted-foreground">none yet, add some below.</p>
+              ) : (
+                <ul className="divide-y rounded-lg border">
+                  {weekData.games.map((g) => (
+                    <li key={g.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <Badge variant="outline" className="w-12 justify-center uppercase">
+                        {g.league === "nfl" ? "nfl" : "cfb"}
+                      </Badge>
+                      <span className="flex-1">
+                        {g.away_abbr} @ {g.home_abbr}
+                        <span className="ml-2 text-xs text-muted-foreground">{kickoffLabel(g.kickoff)}</span>
+                      </span>
+                      <form action={removeGame.bind(null, g.id)}>
+                        <Button type="submit" variant="ghost" size="icon-sm" aria-label="remove game">
+                          <XIcon />
+                        </Button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
 
           {/* ------------------------------------------------ browse espn */}
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">add games</h2>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              {(["nfl", "ncaaf"] as const).map((l) => (
-                <Link
-                  key={l}
-                  href={q({ league: l, ew: undefined, st: undefined })}
-                  className={`rounded-lg px-3 py-1.5 ${league === l ? "bg-white text-zinc-900" : "border border-zinc-700"}`}
-                >
-                  {l === "nfl" ? "nfl" : "college"}
-                </Link>
-              ))}
-              {schedule && (
-                <span className="flex items-center gap-1">
-                  <Link href={q({ ew: Math.max(1, schedule.week - 1) })} className="rounded-lg border border-zinc-700 px-2 py-1.5">‹</Link>
-                  <span className="px-1">
-                    {schedule.seasonType === 3 ? "postseason " : ""}week {schedule.week}
-                  </span>
-                  <Link href={q({ ew: schedule.week + 1 })} className="rounded-lg border border-zinc-700 px-2 py-1.5">›</Link>
-                </span>
-              )}
-              <Link
-                href={q({ st: schedule?.seasonType === 3 ? 2 : 3, ew: 1 })}
-                className="rounded-lg border border-zinc-700 px-3 py-1.5"
-              >
-                {schedule?.seasonType === 3 ? "regular season" : "postseason"}
-              </Link>
-              {league === "ncaaf" && (
-                <Link href={q({ top25: top25 ? undefined : 1 })} className={`rounded-lg px-3 py-1.5 ${top25 ? "bg-white text-zinc-900" : "border border-zinc-700"}`}>
-                  top 25 only
-                </Link>
-              )}
-            </div>
-
-            {!schedule && <p className="text-sm text-red-400">couldn&apos;t reach espn, try again in a sec.</p>}
-            {schedule && browse.length === 0 && <p className="text-sm text-zinc-500">no games found for that week.</p>}
-
-            <ul className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-              {browse.map((g) => (
-                <li key={g.espnId} className="flex items-center gap-3 p-3 text-sm">
-                  <div className="flex flex-1 items-center gap-2 min-w-0">
-                    <TeamLogo src={g.awayLogo} size={22} />
-                    <span className="truncate">
-                      {g.awayRank && <span className="text-xs text-zinc-500">#{g.awayRank} </span>}
-                      {g.awayName}
-                      <span className="text-zinc-500"> @ </span>
-                      {g.homeRank && <span className="text-xs text-zinc-500">#{g.homeRank} </span>}
-                      {g.homeName}
+          <Card>
+            <CardHeader>
+              <CardTitle>add games</CardTitle>
+              <CardDescription>straight from espn. college is sorted by ranking.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(["nfl", "ncaaf"] as const).map((l) => (
+                  <Button key={l} asChild size="sm" variant={chip(league === l)}>
+                    <Link href={q({ league: l, ew: undefined, st: undefined })}>{l === "nfl" ? "nfl" : "college"}</Link>
+                  </Button>
+                ))}
+                <Separator orientation="vertical" className="mx-1 h-5" />
+                {schedule && (
+                  <span className="flex items-center gap-1 text-sm">
+                    <Button asChild size="icon-sm" variant="outline" aria-label="previous week">
+                      <Link href={q({ ew: Math.max(1, schedule.week - 1) })}>
+                        <ChevronLeftIcon />
+                      </Link>
+                    </Button>
+                    <span className="px-1 tabular-nums">
+                      {schedule.seasonType === 3 ? "post " : ""}wk {schedule.week}
                     </span>
-                    <TeamLogo src={g.homeLogo} size={22} />
-                  </div>
-                  <span className="hidden text-xs text-zinc-500 sm:inline">
-                    {kickoffLabel(g.kickoff)}
-                    {g.network && ` · ${g.network}`}
+                    <Button asChild size="icon-sm" variant="outline" aria-label="next week">
+                      <Link href={q({ ew: schedule.week + 1 })}>
+                        <ChevronRightIcon />
+                      </Link>
+                    </Button>
                   </span>
-                  <AddGameButton
-                    added={added.has(g.espnId)}
-                    args={[week.id, league, g.espnId, schedule!.week, schedule!.seasonType]}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
+                )}
+                <Button asChild size="sm" variant="ghost">
+                  <Link href={q({ st: schedule?.seasonType === 3 ? 2 : 3, ew: 1 })}>
+                    {schedule?.seasonType === 3 ? "regular season" : "postseason"}
+                  </Link>
+                </Button>
+                {league === "ncaaf" && (
+                  <Button asChild size="sm" variant={chip(top25)}>
+                    <Link href={q({ top25: top25 ? undefined : 1 })}>top 25 only</Link>
+                  </Button>
+                )}
+              </div>
+
+              {!schedule && <p className="text-sm text-destructive">couldn&apos;t reach espn, try again in a sec.</p>}
+              {schedule && browse.length === 0 && <p className="text-sm text-muted-foreground">no games found for that week.</p>}
+
+              {browse.length > 0 && (
+                <ul className="divide-y rounded-lg border">
+                  {browse.map((g) => (
+                    <li key={g.espnId} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <TeamLogo src={g.awayLogo} size={22} />
+                        <span className="truncate">
+                          {g.awayRank && <span className="text-xs text-muted-foreground">#{g.awayRank} </span>}
+                          {g.awayName}
+                          <span className="text-muted-foreground"> @ </span>
+                          {g.homeRank && <span className="text-xs text-muted-foreground">#{g.homeRank} </span>}
+                          {g.homeName}
+                        </span>
+                        <TeamLogo src={g.homeLogo} size={22} />
+                      </div>
+                      <span className="hidden text-xs text-muted-foreground sm:inline">
+                        {kickoffLabel(g.kickoff)}
+                        {g.network && ` · ${g.network}`}
+                      </span>
+                      <AddGameButton
+                        added={added.has(g.espnId)}
+                        args={[week.id, league, g.espnId, schedule!.week, schedule!.seasonType]}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
       {/* ------------------------------------------------ members */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">people</h2>
-        <p className="text-sm text-zinc-500">
-          anyone with a google account can sign in, but they can&apos;t see anything until you approve them here.
-        </p>
-        <ul className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-          {((people ?? []) as Profile[]).map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">
-              <span className="flex-1 min-w-40">
-                {p.name}
-                <span className="block text-xs text-zinc-500">{p.email}</span>
-              </span>
-              {!p.approved && <span className="rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">waiting</span>}
-              {p.is_admin && <span className="rounded bg-zinc-700 px-2 py-0.5 text-xs">admin</span>}
-              {p.id !== me.id && (
-                <>
-                  <form action={setMember.bind(null, p.id, !p.approved, p.approved ? false : p.is_admin)}>
-                    <button className={`rounded-lg px-3 py-1 text-xs ${p.approved ? "border border-zinc-700 text-red-400" : "bg-lime-500 text-zinc-900 font-medium"}`}>
-                      {p.approved ? "remove" : "approve"}
-                    </button>
-                  </form>
-                  {p.approved && (
-                    <form action={setMember.bind(null, p.id, true, !p.is_admin)}>
-                      <button className="rounded-lg border border-zinc-700 px-3 py-1 text-xs">
-                        {p.is_admin ? "unmake admin" : "make admin"}
-                      </button>
+      <Card>
+        <CardHeader>
+          <CardTitle>people</CardTitle>
+          <CardDescription>
+            add them as a google test user first, then approve them here once they&apos;ve signed in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="divide-y rounded-lg border">
+            {((people ?? []) as Profile[]).map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+                <span className="min-w-40 flex-1">
+                  {p.name}
+                  <span className="block text-xs text-muted-foreground">{p.email}</span>
+                </span>
+                {!p.approved && <Badge className="bg-live/15 text-live">waiting</Badge>}
+                {p.is_admin && <Badge variant="secondary">admin</Badge>}
+                {p.id !== me.id && (
+                  <>
+                    <form action={setMember.bind(null, p.id, !p.approved, p.approved ? false : p.is_admin)}>
+                      <Button type="submit" size="sm" variant={p.approved ? "destructive" : "default"}>
+                        {p.approved ? "remove" : "approve"}
+                      </Button>
                     </form>
-                  )}
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+                    {p.approved && (
+                      <form action={setMember.bind(null, p.id, true, !p.is_admin)}>
+                        <Button type="submit" size="sm" variant="outline">
+                          {p.is_admin ? "unmake admin" : "make admin"}
+                        </Button>
+                      </form>
+                    )}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
       {week && (
-        <section>
-          <form action={deleteWeek.bind(null, week.id)}>
-            <ConfirmButton message={`delete ${week.label} and everyone's picks for it? can't undo this.`} className="text-xs text-red-400/70">
-              delete {week.label} and all its picks
-            </ConfirmButton>
-          </form>
-        </section>
+        <form action={deleteWeek.bind(null, week.id)}>
+          <ConfirmButton message={`delete ${week.label} and everyone's picks for it? can't undo this.`}>
+            <TrashIcon /> delete {week.label}
+          </ConfirmButton>
+        </form>
       )}
     </div>
   );

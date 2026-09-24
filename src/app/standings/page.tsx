@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import { TrophyIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMe, getMembers, getSeasonData, getWeeks, scorePicks } from "@/lib/data";
 
 export default async function StandingsPage() {
@@ -37,67 +41,77 @@ export default async function StandingsPage() {
     .sort((a, b) => b.correct - a.correct || b.pct - a.pct);
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">{season} standings</h1>
+    <div className="space-y-6">
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">{season} standings</h1>
 
-      <table className="w-full text-sm">
-        <thead className="text-xs text-zinc-500">
-          <tr>
-            <th className="p-2 text-left font-normal">#</th>
-            <th className="p-2 text-left font-normal">name</th>
-            <th className="p-2 text-right font-normal">right</th>
-            <th className="p-2 text-right font-normal">wrong</th>
-            <th className="p-2 text-right font-normal">%</th>
-            <th className="p-2 text-right font-normal" title="weeks won (ties count for everyone tied)">wk wins</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.m.id} className={`border-t border-zinc-800 ${r.m.id === me.id ? "bg-zinc-900" : ""}`}>
-              <td className="p-2 text-zinc-500">{i + 1}</td>
-              <td className="p-2 font-medium">{r.m.name.toLowerCase()}</td>
-              <td className="p-2 text-right font-mono font-bold">{r.correct}</td>
-              <td className="p-2 text-right font-mono text-zinc-400">{r.decided - r.correct}</td>
-              <td className="p-2 text-right font-mono text-zinc-400">{r.decided ? Math.round(r.pct * 100) : "–"}</td>
-              <td className="p-2 text-right font-mono">{r.weeks}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Card className="py-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8">#</TableHead>
+              <TableHead>name</TableHead>
+              <TableHead className="text-right">right</TableHead>
+              <TableHead className="text-right">wrong</TableHead>
+              <TableHead className="text-right">%</TableHead>
+              <TableHead className="text-right" title="weeks won (ties count for everyone tied)">wk wins</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r, i) => (
+              <TableRow key={r.m.id} className={cn(r.m.id === me.id && "bg-muted/40")}>
+                <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                <TableCell className="font-medium">
+                  {r.m.name.toLowerCase()}
+                  {i === 0 && r.correct > 0 && <TrophyIcon className="ml-1.5 inline size-3.5 text-live" />}
+                </TableCell>
+                <TableCell className="text-right font-mono font-semibold tabular-nums">{r.correct}</TableCell>
+                <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{r.decided - r.correct}</TableCell>
+                <TableCell className="text-right font-mono text-muted-foreground tabular-nums">
+                  {r.decided ? Math.round(r.pct * 100) : "–"}
+                </TableCell>
+                <TableCell className="text-right font-mono tabular-nums">{r.weeks}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
 
       {perWeek.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">by week</h2>
-          <div className="-mx-4 overflow-x-auto px-4">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-zinc-500">
-                <tr>
-                  <th className="sticky left-0 bg-zinc-950 p-2 text-left font-normal">name</th>
+          <h2 className="font-heading text-lg font-semibold">by week</h2>
+          <Card className="py-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="sticky left-0 bg-card">name</TableHead>
                   {perWeek.map(({ week }) => (
-                    <th key={week.id} className="whitespace-nowrap p-2 text-right font-normal">
+                    <TableHead key={week.id} className="text-right">
                       {week.label.replace(/^week\s*/i, "wk ")}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((r) => (
-                  <tr key={r.m.id} className="border-t border-zinc-800">
-                    <td className="sticky left-0 bg-zinc-950 p-2">{r.m.name.toLowerCase()}</td>
+                  <TableRow key={r.m.id}>
+                    <TableCell className="sticky left-0 bg-card">{r.m.name.toLowerCase()}</TableCell>
                     {perWeek.map(({ week, scores }) => {
                       const best = Math.max(0, ...[...scores.values()].map((s) => s.correct));
                       const c = scores.get(r.m.id)?.correct ?? 0;
                       return (
-                        <td key={week.id} className={`p-2 text-right font-mono ${c === best && best > 0 ? "text-lime-400 font-bold" : ""}`}>
+                        <TableCell
+                          key={week.id}
+                          className={cn("text-right font-mono tabular-nums", c === best && best > 0 && "font-bold text-win")}
+                        >
                           {c}
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </Card>
         </section>
       )}
     </div>

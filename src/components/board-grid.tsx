@@ -1,7 +1,10 @@
-import { firstName, isLocked } from "@/lib/format";
-import type { Game, Pick, Profile } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { firstName, isLocked, kickoffLabel } from "@/lib/format";
+import type { Game, Pick, Profile, Side } from "@/lib/types";
+import { Card } from "@/components/ui/card";
+import { TeamLogo } from "./team-logo";
 
-// the whiteboard: games down the side, people across the top
+// the whiteboard: one tile per game, names written under the side they took
 export function BoardGrid({ games, members, picks, picked, meId }: {
   games: Game[];
   members: Profile[];
@@ -9,86 +12,117 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
   picked: { user_id: string; game_id: number }[];
   meId: string;
 }) {
-  const pickMap = new Map(picks.map((p) => [`${p.user_id}:${p.game_id}`, p.side]));
-  const pickedSet = new Set(picked.map((p) => `${p.user_id}:${p.game_id}`));
+  const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
 
-  const totals = new Map<string, number>();
-  for (const m of members) totals.set(m.id, 0);
-  for (const g of games) {
-    if (g.status !== "post" || !g.winner) continue;
-    for (const m of members) {
-      if (pickMap.get(`${m.id}:${g.id}`) === g.winner) totals.set(m.id, (totals.get(m.id) ?? 0) + 1);
-    }
+  // weekly totals
+  const totals = new Map<string, number>(members.map((m) => [m.id, 0]));
+  const byGame = new Map(games.map((g) => [g.id, g]));
+  for (const p of picks) {
+    const g = byGame.get(p.game_id);
+    if (g?.status === "post" && g.winner === p.side) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + 1);
   }
-  const best = Math.max(0, ...totals.values());
+  const ranked = members
+    .map((m) => ({ id: m.id, name: names.get(m.id)!, pts: totals.get(m.id) ?? 0 }))
+    .sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));
+  const best = ranked[0]?.pts ?? 0;
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4">
-      <table className="w-full border-separate border-spacing-0 text-sm">
-        <thead>
-          <tr>
-            <th className="sticky left-0 z-10 bg-zinc-950 p-2 text-left text-xs font-normal text-zinc-500">game</th>
-            {members.map((m) => (
-              <th
-                key={m.id}
-                className={`min-w-14 p-2 text-center text-xs font-semibold ${m.id === meId ? "text-white" : "text-zinc-400"}`}
-              >
-                {firstName(m.name).toLowerCase()}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {games.map((g) => {
-            const locked = isLocked(g);
-            return (
-              <tr key={g.id}>
-                <td className="sticky left-0 z-10 whitespace-nowrap border-t border-zinc-800 bg-zinc-950 p-2 text-xs">
-                  <span className={g.winner === "away" ? "font-bold text-white" : "text-zinc-400"}>{g.away_abbr}</span>
-                  <span className="text-zinc-600"> @ </span>
-                  <span className={g.winner === "home" ? "font-bold text-white" : "text-zinc-400"}>{g.home_abbr}</span>
-                  {g.status === "in" && <span className="ml-1 text-amber-400">•</span>}
-                </td>
-                {members.map((m) => {
-                  const key = `${m.id}:${g.id}`;
-                  const side = pickMap.get(key);
-                  const hasPicked = pickedSet.has(key);
-                  let cls = "text-zinc-300";
-                  if (g.status === "post" && side && g.winner) {
-                    cls = g.winner === side ? "bg-lime-500/20 text-lime-300 font-semibold" : "bg-red-500/15 text-red-300/80 line-through";
-                  }
-                  return (
-                    <td key={m.id} className={`border-t border-zinc-800 p-2 text-center font-mono text-xs ${cls}`}>
-                      {side
-                        ? side === "home" ? g.home_abbr : g.away_abbr
-                        : hasPicked
-                          ? <span className="text-zinc-500" title="picked, hidden until kickoff">✓</span>
-                          : <span className={locked ? "text-zinc-700" : "text-amber-500/70"}>–</span>}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td className="sticky left-0 z-10 border-t-2 border-zinc-700 bg-zinc-950 p-2 text-xs font-semibold">total</td>
-            {members.map((m) => {
-              const t = totals.get(m.id) ?? 0;
-              return (
-                <td
-                  key={m.id}
-                  className={`border-t-2 border-zinc-700 p-2 text-center font-mono font-bold ${t === best && best > 0 ? "text-lime-400" : ""}`}
-                >
-                  {t}
-                </td>
-              );
-            })}
-          </tr>
-        </tfoot>
-      </table>
-      <p className="mt-3 text-xs text-zinc-500">✓ = picked, hidden until kickoff · – = no pick yet</p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {ranked.map((r) => (
+          <span
+            key={r.id}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs",
+              r.pts === best && best > 0 && "border-win/50 bg-win/10 text-win",
+              r.id === meId && !(r.pts === best && best > 0) && "border-foreground/30",
+            )}
+          >
+            {r.name}
+            <span className="font-mono font-semibold tabular-nums">{r.pts}</span>
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {games.map((g) => (
+          <Tile
+            key={g.id}
+            game={g}
+            picks={picks.filter((p) => p.game_id === g.id)}
+            pickedCount={picked.filter((p) => p.game_id === g.id).length}
+            total={members.length}
+            names={names}
+            meId={meId}
+          />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function Tile({ game: g, picks, pickedCount, total, names, meId }: {
+  game: Game;
+  picks: Pick[];
+  pickedCount: number;
+  total: number;
+  names: Map<string, string>;
+  meId: string;
+}) {
+  const locked = isLocked(g);
+  const final = g.status === "post";
+  const live = g.status === "in";
+
+  return (
+    <Card size="sm" className="gap-0 py-0">
+      <div className="grid grid-cols-2 divide-x">
+        {(["away", "home"] as Side[]).map((s) => {
+          const won = final && g.winner === s;
+          const lost = final && g.winner && g.winner !== s;
+          const takers = picks
+            .filter((p) => p.side === s)
+            .map((p) => ({ id: p.user_id, name: names.get(p.user_id) ?? "?" }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          const score = s === "home" ? g.home_score : g.away_score;
+          return (
+            <div key={s} className={cn("flex min-h-36 flex-col p-2", won && "bg-win/10")}>
+              <div className="flex items-center gap-1.5 border-b border-dashed pb-1.5">
+                <TeamLogo src={s === "home" ? g.home_logo : g.away_logo} size={18} />
+                <span className={cn("text-sm font-bold", won && "text-win", lost && "text-muted-foreground")}>
+                  {s === "home" ? g.home_abbr : g.away_abbr}
+                </span>
+                {g.status !== "pre" && g.status !== "void" && (
+                  <span className={cn("ml-auto font-mono text-sm tabular-nums", lost && "text-muted-foreground")}>
+                    {score ?? 0}
+                  </span>
+                )}
+              </div>
+              <ul className="mt-1.5 space-y-0.5 font-hand text-[15px] leading-tight">
+                {takers.map((t) => (
+                  <li
+                    key={t.id}
+                    className={cn(
+                      "truncate",
+                      t.id === meId && "font-semibold",
+                      won && "text-win",
+                      lost && "text-loss/80 line-through",
+                    )}
+                  >
+                    {t.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between gap-1 border-t px-2 py-1.5 text-[11px] text-muted-foreground">
+        <span className={cn("flex items-center gap-1", live && "font-medium text-live")}>
+          {live && <span className="size-1.5 animate-pulse rounded-full bg-live" />}
+          {g.status === "pre" ? kickoffLabel(g.kickoff) : (g.status_detail ?? "").toLowerCase()}
+        </span>
+        <span>{locked ? g.league === "nfl" ? "nfl" : "cfb" : `${pickedCount}/${total} in`}</span>
+      </div>
+    </Card>
   );
 }
