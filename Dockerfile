@@ -8,6 +8,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# coolify provides this; shown in the footer so you can tell which deploy is live
+ARG SOURCE_COMMIT
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

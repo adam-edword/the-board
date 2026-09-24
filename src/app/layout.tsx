@@ -5,6 +5,7 @@ import { getMe } from "@/lib/data";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteNav } from "@/components/site-nav";
+import { versionLabel } from "@/lib/version";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -40,7 +41,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               </div>
             </header>
           )}
-          <main className="mx-auto max-w-3xl px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+2rem)]">{children}</main>
+          <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+          <footer className="mx-auto max-w-3xl px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] text-center text-[11px] text-muted-foreground/60">
+            {versionLabel()}
+          </footer>
           <Toaster theme="dark" position="top-center" />
         </TooltipProvider>
       </body>
