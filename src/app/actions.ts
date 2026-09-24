@@ -1,0 +1,139 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { fetchSchedule, type League } from "@/lib/espn";
+import { syncScores } from "@/lib/sync";
+import { getMe } from "@/lib/data";
+import type { Side } from "@/lib/types";
+
+async function requireAdmin() {
+  const me = await getMe();
+  if (!me?.is_admin) throw new Error("admins only");
+  return me;
+}
+
+// ---------------------------------------------------------------- picks
+
+export async function setPick(gameId: number, side: Side | null) {
+  const supabase = await createClient();
+  const me = await getMe();
+  if (!me) throw new Error("not signed in");
+
+  // rls rejects anything after kickoff, this is just a friendlier error
+  const { error } = side
+    ? await supabase
+        .from("picks")
+        .upsert({ user_id: me.id, game_id: gameId, side, updated_at: new Date().toISOString() })
+    : await supabase.from("picks").delete().eq("user_id", me.id).eq("game_id", gameId);
+  if (error) return { error: "that game already kicked off" };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------- profile
+
+export async function updateName(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim().slice(0, 40);
+  const me = await getMe();
+  if (!me || !name) return;
+  const supabase = await createClient();
+  await supabase.from("profiles").update({ name }).eq("id", me.id);
+  revalidatePath("/", "layout");
+}
+
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}
+
+// ---------------------------------------------------------------- admin
+
+export async function createWeek(formData: FormData) {
+  await requireAdmin();
+  const label = String(formData.get("label") ?? "").trim();
+  const season = Number(formData.get("season"));
+  if (!label || !season) return;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("weeks").insert({ label, season }).select("id").single();
+  if (error) throw error;
+  redirect(`/admin?week=${data.id}`);
+}
+
+export async function renameWeek(weekId: number, formData: FormData) {
+  await requireAdmin();
+  const label = String(formData.get("label") ?? "").trim();
+  if (!label) return;
+  const supabase = await createClient();
+  await supabase.from("weeks").update({ label }).eq("id", weekId);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteWeek(weekId: number) {
+  await requireAdmin();
+  const supabase = await createClient();
+  await supabase.from("weeks").delete().eq("id", weekId);
+  redirect("/admin");
+}
+
+export async function addGame(weekId: number, league: League, espnId: string, week: number, seasonType: number) {
+  await requireAdmin();
+  // re-fetch from espn rather than trusting the client with team names etc
+  const schedule = await fetchSchedule(league, { week, seasonType });
+  const g = schedule.games.find((x) => x.espnId === espnId);
+  if (!g) throw new Error("game not found on espn");
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("games").upsert(
+    {
+      week_id: weekId,
+      league,
+      espn_id: g.espnId,
+      kickoff: g.kickoff,
+      home_name: g.homeName,
+      home_abbr: g.homeAbbr,
+      home_logo: g.homeLogo,
+      home_rank: g.homeRank,
+      away_name: g.awayName,
+      away_abbr: g.awayAbbr,
+      away_logo: g.awayLogo,
+      away_rank: g.awayRank,
+      home_score: g.homeScore,
+      away_score: g.awayScore,
+      status: g.status,
+      status_detail: g.statusDetail,
+      winner: g.winner,
+    },
+    { onConflict: "week_id,espn_id" },
+  );
+  if (error) throw error;
+  revalidatePath("/", "layout");
+}
+
+export async function removeGame(gameId: number) {
+  await requireAdmin();
+  const supabase = await createClient();
+  await supabase.from("games").delete().eq("id", gameId);
+  revalidatePath("/", "layout");
+}
+
+export async function setMember(uid: string, approved: boolean, isAdmin: boolean) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_member", {
+    uid,
+    make_approved: approved,
+    make_admin: isAdmin,
+  });
+  if (error) throw error;
+  revalidatePath("/", "layout");
+}
+
+export async function refreshScores() {
+  await requireAdmin();
+  await syncScores({ force: true });
+  revalidatePath("/", "layout");
+}
