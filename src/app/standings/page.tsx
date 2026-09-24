@@ -28,17 +28,17 @@ export default async function StandingsPage() {
 
   const weeklyWins = new Map<string, number>();
   for (const { scores } of perWeek) {
-    const best = Math.max(0, ...[...scores.values()].map((s) => s.correct));
+    const best = Math.max(0, ...[...scores.values()].map((s) => s.points));
     if (best === 0) continue;
-    for (const [uid, s] of scores) if (s.correct === best) weeklyWins.set(uid, (weeklyWins.get(uid) ?? 0) + 1);
+    for (const [uid, s] of scores) if (s.points === best) weeklyWins.set(uid, (weeklyWins.get(uid) ?? 0) + 1);
   }
 
   const rows = members
     .map((m) => {
-      const s = season_.get(m.id) ?? { correct: 0, decided: 0 };
+      const s = season_.get(m.id) ?? { points: 0, correct: 0, decided: 0 };
       return { m, ...s, pct: s.decided ? s.correct / s.decided : 0, weeks: weeklyWins.get(m.id) ?? 0 };
     })
-    .sort((a, b) => b.correct - a.correct || b.pct - a.pct);
+    .sort((a, b) => b.points - a.points || b.pct - a.pct);
 
   return (
     <div className="space-y-6">
@@ -50,6 +50,7 @@ export default async function StandingsPage() {
             <TableRow>
               <TableHead className="w-8">#</TableHead>
               <TableHead>name</TableHead>
+              <TableHead className="text-right">pts</TableHead>
               <TableHead className="text-right">right</TableHead>
               <TableHead className="text-right">wrong</TableHead>
               <TableHead className="text-right">%</TableHead>
@@ -62,9 +63,10 @@ export default async function StandingsPage() {
                 <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                 <TableCell className="font-medium">
                   {r.m.name.toLowerCase()}
-                  {i === 0 && r.correct > 0 && <TrophyIcon className="ml-1.5 inline size-3.5 text-live" />}
+                  {i === 0 && r.points > 0 && <TrophyIcon className="ml-1.5 inline size-3.5 text-live" />}
                 </TableCell>
-                <TableCell className="text-right font-mono font-semibold tabular-nums">{r.correct}</TableCell>
+                <TableCell className="text-right font-mono font-semibold tabular-nums">{r.points}</TableCell>
+                <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{r.correct}</TableCell>
                 <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{r.decided - r.correct}</TableCell>
                 <TableCell className="text-right font-mono text-muted-foreground tabular-nums">
                   {r.decided ? Math.round(r.pct * 100) : "–"}
@@ -96,8 +98,8 @@ export default async function StandingsPage() {
                   <TableRow key={r.m.id}>
                     <TableCell className="sticky left-0 bg-card">{r.m.name.toLowerCase()}</TableCell>
                     {perWeek.map(({ week, scores }) => {
-                      const best = Math.max(0, ...[...scores.values()].map((s) => s.correct));
-                      const c = scores.get(r.m.id)?.correct ?? 0;
+                      const best = Math.max(0, ...[...scores.values()].map((s) => s.points));
+                      const c = scores.get(r.m.id)?.points ?? 0;
                       return (
                         <TableCell
                           key={week.id}

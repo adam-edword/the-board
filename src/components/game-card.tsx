@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { CheckIcon, LockIcon } from "lucide-react";
+import { CheckIcon, LockIcon, StarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { setPick } from "@/app/actions";
 import { cn } from "@/lib/utils";
@@ -42,14 +42,22 @@ export function GameCard({ game, mySide, pickers }: Props) {
       size="sm"
       className={cn(
         "gap-3 px-3 transition-colors",
+        game.featured && !result && "ring-live/50",
         result === "win" && "bg-win/5 ring-win/40",
         result === "loss" && "bg-loss/5 ring-loss/30",
       )}
     >
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-        <Badge variant="outline" className="uppercase">
-          {game.league === "nfl" ? "nfl" : "college"}
-        </Badge>
+        <span className="flex items-center gap-1.5">
+          <Badge variant="outline" className="uppercase">
+            {game.league === "nfl" ? "nfl" : "college"}
+          </Badge>
+          {game.featured && (
+            <Badge className="bg-live/15 text-live">
+              <StarIcon className="fill-current" /> featured · 2 pts
+            </Badge>
+          )}
+        </span>
         <span className="flex items-center gap-2">
           {live && <span className="size-1.5 animate-pulse rounded-full bg-live" />}
           <span className={cn(live && "font-medium text-live")}>

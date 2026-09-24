@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, RefreshCwIcon, TrashIcon, XIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, RefreshCwIcon, StarIcon, TrashIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { kickoffLabel } from "@/lib/format";
 import { TeamLogo } from "@/components/team-logo";
 import { WeekPicker } from "@/components/week-picker";
 import type { Profile } from "@/lib/types";
-import { createWeek, deleteWeek, refreshScores, removeGame, renameWeek, setMember } from "@/app/actions";
+import { createWeek, deleteWeek, refreshScores, removeGame, renameWeek, setFeatured, setMember } from "@/app/actions";
 import { ConfirmButton } from "@/components/confirm-button";
 import { AddGameButton } from "./add-game-button";
 
@@ -111,6 +111,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
               <CardTitle>
                 games in {week.label} <span className="text-muted-foreground">({weekData.games.length})</span>
               </CardTitle>
+              <CardDescription>star one as the featured game, it&apos;s worth 2 points.</CardDescription>
             </CardHeader>
             <CardContent>
               {weekData.games.length === 0 ? (
@@ -123,9 +124,21 @@ export default async function AdminPage(props: PageProps<"/admin">) {
                         {g.league === "nfl" ? "nfl" : "cfb"}
                       </Badge>
                       <span className="flex-1">
+                        {g.featured && <StarIcon className="mr-1.5 inline size-3.5 fill-live text-live" />}
                         {g.away_abbr} @ {g.home_abbr}
                         <span className="ml-2 text-xs text-muted-foreground">{kickoffLabel(g.kickoff)}</span>
                       </span>
+                      <form action={setFeatured.bind(null, week.id, g.id, !g.featured)}>
+                        <Button
+                          type="submit"
+                          variant={g.featured ? "secondary" : "ghost"}
+                          size="sm"
+                          className={g.featured ? "text-live" : "text-muted-foreground"}
+                        >
+                          <StarIcon className={g.featured ? "fill-current" : ""} />
+                          {g.featured ? "featured" : "feature"}
+                        </Button>
+                      </form>
                       <form action={removeGame.bind(null, g.id)}>
                         <Button type="submit" variant="ghost" size="icon-sm" aria-label="remove game">
                           <XIcon />

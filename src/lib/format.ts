@@ -16,6 +16,11 @@ export function isLocked(game: { kickoff: string; status: string }) {
   return game.status !== "pre" || new Date(game.kickoff).getTime() <= Date.now();
 }
 
+// the featured game of the week is worth double
+export function pointsFor(game: { featured: boolean }) {
+  return game.featured ? 2 : 1;
+}
+
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || name;
 }

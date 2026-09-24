@@ -113,6 +113,23 @@ export async function addGame(weekId: number, league: League, espnId: string, we
   revalidatePath("/", "layout");
 }
 
+// only one featured game per week. passing the current one again un-features it.
+export async function setFeatured(weekId: number, gameId: number, featured: boolean) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error: clearError } = await supabase
+    .from("games")
+    .update({ featured: false })
+    .eq("week_id", weekId)
+    .eq("featured", true);
+  if (clearError) throw clearError;
+  if (featured) {
+    const { error } = await supabase.from("games").update({ featured: true }).eq("id", gameId);
+    if (error) throw error;
+  }
+  revalidatePath("/", "layout");
+}
+
 export async function removeGame(gameId: number) {
   await requireAdmin();
   const supabase = await createClient();

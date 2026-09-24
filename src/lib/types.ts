@@ -28,6 +28,7 @@ export type Game = {
   status: "pre" | "in" | "post" | "void";
   status_detail: string | null;
   winner: "home" | "away" | "tie" | null;
+  featured: boolean;
 };
 
 export type Side = "home" | "away";

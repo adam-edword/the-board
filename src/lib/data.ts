@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Game, Pick, Profile, Week } from "@/lib/types";
+import { pointsFor } from "@/lib/format";
 
 export const getMe = cache(async () => {
   const supabase = await createClient();
@@ -73,13 +74,16 @@ export async function getSeasonData(season: number) {
 
 export function scorePicks(games: Game[], picks: Pick[]) {
   const byId = new Map(games.map((g) => [g.id, g]));
-  const totals = new Map<string, { correct: number; decided: number }>();
+  const totals = new Map<string, { points: number; correct: number; decided: number }>();
   for (const p of picks) {
     const g = byId.get(p.game_id);
     if (!g || g.status !== "post" || !g.winner) continue;
-    const t = totals.get(p.user_id) ?? { correct: 0, decided: 0 };
+    const t = totals.get(p.user_id) ?? { points: 0, correct: 0, decided: 0 };
     t.decided++;
-    if (g.winner === p.side) t.correct++;
+    if (g.winner === p.side) {
+      t.correct++;
+      t.points += pointsFor(g);
+    }
     totals.set(p.user_id, t);
   }
   return totals;

@@ -1,5 +1,6 @@
+import { StarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { firstName, isLocked, kickoffLabel } from "@/lib/format";
+import { firstName, isLocked, kickoffLabel, pointsFor } from "@/lib/format";
 import type { Game, Pick, Profile, Side } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { TeamLogo } from "./team-logo";
@@ -19,7 +20,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
   const byGame = new Map(games.map((g) => [g.id, g]));
   for (const p of picks) {
     const g = byGame.get(p.game_id);
-    if (g?.status === "post" && g.winner === p.side) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + 1);
+    if (g?.status === "post" && g.winner === p.side) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + pointsFor(g));
   }
   const ranked = members
     .map((m) => ({ id: m.id, name: names.get(m.id)!, pts: totals.get(m.id) ?? 0 }))
@@ -74,7 +75,7 @@ function Tile({ game: g, picks, pickedCount, total, names, meId }: {
   const live = g.status === "in";
 
   return (
-    <Card size="sm" className="gap-0 py-0">
+    <Card size="sm" className={cn("gap-0 py-0", g.featured && "ring-2 ring-live/60")}>
       <div className="grid grid-cols-2 divide-x">
         {(["away", "home"] as Side[]).map((s) => {
           const won = final && g.winner === s;
@@ -121,7 +122,14 @@ function Tile({ game: g, picks, pickedCount, total, names, meId }: {
           {live && <span className="size-1.5 animate-pulse rounded-full bg-live" />}
           {g.status === "pre" ? kickoffLabel(g.kickoff) : (g.status_detail ?? "").toLowerCase()}
         </span>
-        <span>{locked ? g.league === "nfl" ? "nfl" : "cfb" : `${pickedCount}/${total} in`}</span>
+        <span className="flex items-center gap-1">
+          {g.featured && (
+            <span className="flex items-center gap-0.5 font-medium text-live">
+              <StarIcon className="size-3 fill-current" /> 2x
+            </span>
+          )}
+          {locked ? (g.league === "nfl" ? "nfl" : "cfb") : `${pickedCount}/${total} in`}
+        </span>
       </div>
     </Card>
   );
