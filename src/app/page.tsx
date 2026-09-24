@@ -2,15 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BoardGrid } from "@/components/board-grid";
-import { GameCard } from "@/components/game-card";
 import { WeekPicker } from "@/components/week-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { firstName, isLocked } from "@/lib/format";
 import { getMe, getMembers, getWeekData, getWeeks } from "@/lib/data";
 import { syncScores } from "@/lib/sync";
-import type { Side } from "@/lib/types";
 
 export default async function BoardPage(props: PageProps<"/">) {
   const me = await getMe();
@@ -80,27 +77,12 @@ export default async function BoardPage(props: PageProps<"/">) {
       {games.length === 0 ? (
         <Empty>no games added to this week yet.</Empty>
       ) : (
-        <Tabs defaultValue={sp.view === "board" ? "board" : "picks"} className="gap-4">
-          <TabsList className="w-full">
-            <TabsTrigger value="picks">my picks</TabsTrigger>
-            <TabsTrigger value="board">the board</TabsTrigger>
-          </TabsList>
-          <TabsContent value="picks" className="space-y-3">
-            {games.map((g) => {
-              let pickers: { home: string[]; away: string[] } | null = null;
-              if (isLocked(g)) {
-                pickers = { home: [], away: [] };
-                for (const p of picks) {
-                  if (p.game_id === g.id) pickers[p.side as Side].push(names.get(p.user_id) ?? "?");
-                }
-              }
-              return <GameCard key={g.id} game={g} mySide={mine.get(g.id) ?? null} pickers={pickers} />;
-            })}
-          </TabsContent>
-          <TabsContent value="board">
-            <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} />
-          </TabsContent>
-        </Tabs>
+        <>
+          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} />
+          <p className="text-center text-xs text-muted-foreground">
+            tap a side to put your name on it, tap again to erase. picks lock at kickoff.
+          </p>
+        </>
       )}
     </div>
   );

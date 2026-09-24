@@ -26,8 +26,8 @@ export default function TermsPage() {
       <h2>Your picks</h2>
       <ul>
         <li>Picks lock when each game kicks off and can&apos;t be changed after that.</li>
-        <li>Other members can see your picks once a game has started.</li>
-        <li>Don&apos;t try to get around the pick locks, see other people&apos;s picks early, or mess with the site.</li>
+        <li>Other members can see your picks as soon as you make them.</li>
+        <li>Don&apos;t try to get around the pick locks or mess with the site.</li>
       </ul>
 
       <h2>Game data</h2>

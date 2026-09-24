@@ -1,9 +1,7 @@
-import { StarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { firstName, isLocked, kickoffLabel, pointsFor } from "@/lib/format";
+import { firstName, pointsFor } from "@/lib/format";
 import type { Game, Pick, Profile, Side } from "@/lib/types";
-import { Card } from "@/components/ui/card";
-import { TeamLogo } from "./team-logo";
+import { BoardTile } from "./board-tile";
 
 // the whiteboard: one tile per game, names written under the side they took
 export function BoardGrid({ games, members, picks, picked, meId }: {
@@ -46,91 +44,29 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {games.map((g) => (
-          <Tile
-            key={g.id}
-            game={g}
-            picks={picks.filter((p) => p.game_id === g.id)}
-            pickedCount={picked.filter((p) => p.game_id === g.id).length}
-            total={members.length}
-            names={names}
-            meId={meId}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Tile({ game: g, picks, pickedCount, total, names, meId }: {
-  game: Game;
-  picks: Pick[];
-  pickedCount: number;
-  total: number;
-  names: Map<string, string>;
-  meId: string;
-}) {
-  const locked = isLocked(g);
-  const final = g.status === "post";
-  const live = g.status === "in";
-
-  return (
-    <Card size="sm" className={cn("gap-0 py-0", g.featured && "ring-2 ring-live/60")}>
-      <div className="grid grid-cols-2 divide-x">
-        {(["away", "home"] as Side[]).map((s) => {
-          const won = final && g.winner === s;
-          const lost = final && g.winner && g.winner !== s;
-          const takers = picks
-            .filter((p) => p.side === s)
-            .map((p) => ({ id: p.user_id, name: names.get(p.user_id) ?? "?" }))
-            .sort((a, b) => a.name.localeCompare(b.name));
-          const score = s === "home" ? g.home_score : g.away_score;
+        {games.map((g) => {
+          const others: Record<Side, string[]> = { home: [], away: [] };
+          let mySide: Side | null = null;
+          for (const p of picks) {
+            if (p.game_id !== g.id) continue;
+            if (p.user_id === meId) mySide = p.side;
+            else others[p.side].push(names.get(p.user_id) ?? "?");
+          }
+          others.home.sort();
+          others.away.sort();
           return (
-            <div key={s} className={cn("flex min-h-36 flex-col p-2", won && "bg-win/10")}>
-              <div className="flex items-center gap-1.5 border-b border-dashed pb-1.5">
-                <TeamLogo src={s === "home" ? g.home_logo : g.away_logo} size={18} />
-                <span className={cn("text-sm font-bold", won && "text-win", lost && "text-muted-foreground")}>
-                  {s === "home" ? g.home_abbr : g.away_abbr}
-                </span>
-                {g.status !== "pre" && g.status !== "void" && (
-                  <span className={cn("ml-auto font-mono text-sm tabular-nums", lost && "text-muted-foreground")}>
-                    {score ?? 0}
-                  </span>
-                )}
-              </div>
-              <ul className="mt-1.5 space-y-0.5 font-hand text-[15px] leading-tight">
-                {takers.map((t) => (
-                  <li
-                    key={t.id}
-                    className={cn(
-                      "truncate",
-                      t.id === meId && "font-semibold",
-                      won && "text-win",
-                      lost && "text-loss/80 line-through",
-                    )}
-                  >
-                    {t.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <BoardTile
+              key={g.id}
+              game={g}
+              others={others}
+              mySide={mySide}
+              myName={names.get(meId) ?? "you"}
+              pickedCount={picked.filter((p) => p.game_id === g.id).length}
+              total={members.length}
+            />
           );
         })}
       </div>
-      <div className="flex items-center justify-between gap-1 border-t px-2 py-1.5 text-[11px] text-muted-foreground">
-        <span className={cn("flex items-center gap-1", live && "font-medium text-live")}>
-          {live && <span className="size-1.5 animate-pulse rounded-full bg-live" />}
-          {g.status === "pre" ? kickoffLabel(g.kickoff) : (g.status_detail ?? "").toLowerCase()}
-        </span>
-        <span className="flex items-center gap-1">
-          {g.featured && (
-            <span className="flex items-center gap-0.5 font-medium text-live">
-              <StarIcon className="size-3 fill-current" /> 2x
-            </span>
-          )}
-          {locked ? (g.league === "nfl" ? "nfl" : "cfb") : `${pickedCount}/${total} in`}
-        </span>
-      </div>
-    </Card>
+    </div>
   );
 }

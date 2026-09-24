@@ -33,7 +33,7 @@ export default function PrivacyPage() {
 
       <h2>Who can see it</h2>
       <ul>
-        <li>Other approved members see your display name, profile photo, and picks (after each game kicks off).</li>
+        <li>Other approved members see your display name, profile photo, and picks.</li>
         <li>The site admin can also see your email address so they can approve you.</li>
         <li>
           Data is stored with Supabase, our database and login provider, which processes it on our behalf. The app
