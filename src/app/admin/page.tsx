@@ -34,6 +34,18 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const added = new Set(weekData?.games.map((g) => g.espn_id));
   let browse = schedule?.games ?? [];
   if (top25) browse = browse.filter((g) => g.homeRank || g.awayRank);
+  if (league === "ncaaf") {
+    // sort by the better-ranked team, then the other team's rank, then kickoff. unranked go last
+    const key = (g: (typeof browse)[number]) => {
+      const [a, b] = [g.homeRank ?? 99, g.awayRank ?? 99].sort((x, y) => x - y);
+      return [a, b];
+    };
+    browse = [...browse].sort((x, y) => {
+      const [xa, xb] = key(x);
+      const [ya, yb] = key(y);
+      return xa - ya || xb - yb || x.kickoff.localeCompare(y.kickoff);
+    });
+  }
 
   const q = (over: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
