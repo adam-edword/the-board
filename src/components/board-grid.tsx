@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { firstName, pointsFor } from "@/lib/format";
 import type { Adjustment, Game, Pick, Profile, Side } from "@/lib/types";
@@ -41,10 +42,11 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
         {ranked.map((r) => (
-          <span
+          <Link
             key={r.id}
+            href={`/players/${r.id}`}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs",
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted/50",
               r.pts === best && best > 0 && "border-win/50 bg-win/10 text-win",
               r.id === meId && !(r.pts === best && best > 0) && "border-foreground/30",
             )}
@@ -55,7 +57,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
               {r.pts}
               {r.edited && <span title="includes an admin edit">*</span>}
             </span>
-          </span>
+          </Link>
         ))}
       </div>
 

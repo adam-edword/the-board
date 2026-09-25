@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BoardGrid } from "@/components/board-grid";
 import { WeekRecap } from "@/components/week-recap";
+import { LockCountdown } from "@/components/lock-countdown";
 import { WeekPicker } from "@/components/week-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,6 +78,14 @@ export default async function BoardPage(props: PageProps<"/">) {
               {slackers.length > 0 && <>waiting on {slackers.map((m) => names.get(m.id)).join(", ")}.</>}
             </p>
           )}
+          <LockCountdown
+            games={openGames.map((g) => ({
+              id: g.id,
+              kickoff: g.kickoff,
+              label: `${g.away_abbr} @ ${g.home_abbr}`,
+              picked: mine.has(g.id),
+            }))}
+          />
         </div>
         {weeks.length > 1 && <WeekPicker weeks={weeks} current={week.id} />}
       </div>

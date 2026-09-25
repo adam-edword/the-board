@@ -2,7 +2,6 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
-import { pointsFor } from "@/lib/format";
 
 export const getMe = cache(async () => {
   const supabase = await createClient();
@@ -81,32 +80,4 @@ export async function getSeasonData(season: number) {
   }
 
   return { weeks, games: (games ?? []) as Game[], picks, adjustments: (adjustments ?? []) as Adjustment[] };
-}
-
-export function scorePicks(games: Game[], picks: Pick[], adjustments: Adjustment[] = []) {
-  const byId = new Map(games.map((g) => [g.id, g]));
-  // edited = an admin fix touched this score, shown with an asterisk
-  const totals = new Map<string, { points: number; correct: number; decided: number; edited: boolean }>();
-  for (const p of picks) {
-    const g = byId.get(p.game_id);
-    if (!g || g.status !== "post" || !g.winner) continue;
-    const t = totals.get(p.user_id) ?? { points: 0, correct: 0, decided: 0, edited: false };
-    t.decided++;
-    if (p.edited) t.edited = true;
-    if (g.winner === p.side) {
-      t.correct++;
-      t.points += pointsFor(g);
-    }
-    totals.set(p.user_id, t);
-  }
-  // adjustments have no individual picks behind them, just totals
-  for (const a of adjustments) {
-    const t = totals.get(a.user_id) ?? { points: 0, correct: 0, decided: 0, edited: false };
-    t.points += a.points;
-    if (a.edited) t.edited = true;
-    t.correct += a.correct ?? 0;
-    t.decided += a.decided ?? 0;
-    totals.set(a.user_id, t);
-  }
-  return totals;
 }
