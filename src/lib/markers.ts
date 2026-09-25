@@ -1,23 +1,24 @@
 // marker colors + handwriting fonts people can pick for their name on the board.
-// keys must match the check constraints in supabase/migrations (colors: 0021, fonts: 0007).
+// keys must match the check constraints in supabase/migrations (colors: 0022, fonts: 0007).
 // each color belongs to one person at a time (see profiles_color_lock in 0021).
 
-// in rainbow order (the pickers show them in this order), neutrals last
+// in rainbow order (the pickers show them in this order), neutrals last.
+// picked to stay easy to tell apart as small text on the dark board.
 export const MARKER_COLORS = {
   red: "#f87171",
-  orange: "#fb923c",
+  orange: "#fe9a00",
   yellow: "#facc15",
   lime: "#bef264",
   green: "#4ade80",
-  teal: "#2dd4bf",
-  sky: "#7dd3fc",
+  teal: "#00bba7",
+  cyan: "#53eafd",
   blue: "#60a5fa",
-  indigo: "#818cf8",
+  lavender: "#c4b4ff",
   purple: "#c084fc",
-  fuchsia: "#e879f9",
+  magenta: "#e12afb",
   pink: "#f472b6",
   white: "#f4f4f5",
-  tan: "#d6a574",
+  gray: "#a6a09b",
 } as const;
 
 // css vars are set up by next/font in app/layout.tsx. size evens out how big
