@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BoardGrid } from "@/components/board-grid";
+import { WeekRecap } from "@/components/week-recap";
 import { WeekPicker } from "@/components/week-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,6 +80,7 @@ export default async function BoardPage(props: PageProps<"/">) {
         <Empty>no games added to this week yet.</Empty>
       ) : (
         <>
+          <WeekRecap label={week.label} games={games} picks={picks} adjustments={adjustments} members={members} />
           <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} />
           <p className="text-center text-xs text-muted-foreground">
             tap a side to put your name on it, tap again to erase. picks lock at kickoff.

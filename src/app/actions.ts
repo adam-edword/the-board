@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchSchedule, type League } from "@/lib/espn";
 import { syncScores } from "@/lib/sync";
 import { getMe } from "@/lib/data";
+import { isLocked } from "@/lib/format";
 import type { Side } from "@/lib/types";
 import { isMarkerColor, isMarkerFont } from "@/lib/markers";
 
@@ -22,16 +23,57 @@ export async function setPick(gameId: number, side: Side | null) {
   const me = await getMe();
   if (!me) throw new Error("not signed in");
 
-  // rls rejects anything after kickoff, this is just a friendlier error
+  // rls blocks late picks for regular players, but admins are allowed to edit
+  // anything, so check here too. admin fixes go through adminSetPick instead
+  // so they get flagged with an asterisk.
+  const { data: game } = await supabase.from("games").select("kickoff, status").eq("id", gameId).single();
+  if (!game || isLocked(game)) return { error: "that game already kicked off" };
+
   const { error } = side
     ? await supabase
         .from("picks")
-        .upsert({ user_id: me.id, game_id: gameId, side, updated_at: new Date().toISOString() })
+        .upsert({ user_id: me.id, game_id: gameId, side, edited: false, updated_at: new Date().toISOString() })
     : await supabase.from("picks").delete().eq("user_id", me.id).eq("game_id", gameId);
   if (error) return { error: "that game already kicked off" };
 
   revalidatePath("/");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------- admin fixes
+// anything changed here is flagged `edited` and shows with an asterisk
+
+export async function adminSetPick(userId: string, gameId: number, side: Side | null) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = side
+    ? await supabase
+        .from("picks")
+        .upsert({ user_id: userId, game_id: gameId, side, edited: true, updated_at: new Date().toISOString() })
+    : await supabase.from("picks").delete().eq("user_id", userId).eq("game_id", gameId);
+  if (error) return { error: "couldn't save that pick" };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function adminSetAdjustment(userId: string, weekId: number, formData: FormData) {
+  await requireAdmin();
+  const raw = String(formData.get("points") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim().slice(0, 200) || null;
+  const supabase = await createClient();
+  if (raw === "") {
+    await supabase.from("score_adjustments").delete().eq("user_id", userId).eq("week_id", weekId);
+  } else {
+    const points = Math.trunc(Number(raw));
+    if (!Number.isFinite(points)) return;
+    await supabase
+      .from("score_adjustments")
+      .upsert(
+        { user_id: userId, week_id: weekId, points, note, edited: true },
+        { onConflict: "user_id,week_id" },
+      );
+  }
+  revalidatePath("/", "layout");
 }
 
 // ---------------------------------------------------------------- profile

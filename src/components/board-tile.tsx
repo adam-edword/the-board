@@ -21,10 +21,11 @@ type Props = {
   me: Marker;
   pickedCount: number;
   total: number;
+  roster: string[];
 };
 
 // one whiteboard square. tap a side to write your name under it, tap again to erase.
-export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: Props) {
+export function BoardTile({ game: g, others, mySide, me, pickedCount, total, roster }: Props) {
   const [side, setOptimisticSide] = useOptimistic(mySide);
   const [pending, startTransition] = useTransition();
   const locked = isLocked(g);
@@ -121,8 +122,8 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
               {(() => {
                 const coinHere = others[s].some((m) => m.bot);
                 // an optimistic switch hasn't been saved yet, so it counts as the newest pick
-                const writers = [...(mine ? [{ ...me, at: side === mySide ? me.at : undefined }] : []), ...others[s]];
-                const { height, spots } = placeNames(g.id, writers.filter((m) => !m.bot), coinHere);
+                const writers = [...(mine ? [me] : []), ...others[s]];
+                const { height, spots } = placeNames(g.id, s, writers.filter((m) => !m.bot), coinHere, roster);
                 return (
                   <ul className="relative mt-2 w-full" style={{ height }}>
                     {spots.map(({ m, top, rowH, x, tilt }) => (
@@ -142,6 +143,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
                           )}
                         >
                           {m.name}
+                          {m.edited && <span title="edited by the admin">*</span>}
                         </span>
                         <span style={{ flexGrow: 1 - x }} />
                       </li>
@@ -179,35 +181,39 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
 }
 
 // names get scattered around their side like a real whiteboard. the name area
-// is a fixed height split into invisible rows, one name per row, so nothing
-// overlaps. when a side gets crowded the rows squeeze together (names can get
-// close, never on top of each other) and only past that does the tile grow.
-// people who picked earlier get first dibs on their spot so names don't jump
-// around, and the bottom-right is left clear when the coin landed there.
+// is a fixed height split into invisible rows. every person on the roster owns
+// one row per side of each tile (a seeded shuffle), so nobody ever overlaps and
+// nobody's name moves when someone else picks or switches sides. rows squeeze
+// together once there are more people than roomy rows, and only past that does
+// the tile grow. the bottom row stays clear on the side where the coin landed.
 const ROW = 30; // roomy row height
 const MIN_ROW = 19; // how tight rows can squeeze before the tile grows
 const ROWS = 6; // fixed height, in roomy rows
 
-function placeNames(gameId: number, writers: Marker[], coinHere: boolean) {
-  const byTime = [...writers].sort(
-    (a, b) => (a.at ? Date.parse(a.at) : Infinity) - (b.at ? Date.parse(b.at) : Infinity) || a.name.localeCompare(b.name),
-  );
+function placeNames(gameId: number, side: Side, writers: Marker[], coinHere: boolean, roster: string[]) {
   const coinSpace = coinHere ? ROW : 0;
   const room = ROWS * ROW - coinSpace;
-  // leave a spare row or two for randomness while there's space, then squeeze
-  const slots = Math.max(Math.floor(room / ROW), byTime.length);
+  // anyone not on the roster (shouldn't happen) still gets a row after it
+  const everyone = [...roster, ...writers.map((m) => m.id ?? m.name).filter((id) => !roster.includes(id))];
+  const slots = Math.max(Math.floor(room / ROW), everyone.length);
   const rowH = Math.max(MIN_ROW, Math.min(ROW, room / slots));
   const height = Math.max(ROWS * ROW, slots * rowH + coinSpace);
 
-  const taken = new Set<number>();
-  const spots = byTime.map((m) => {
-    let h = gameId;
-    for (const ch of m.name) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
-    const r = rng(h);
-    let slot = Math.floor(r() * slots);
-    while (taken.has(slot)) slot = (slot + 1) % slots;
-    taken.add(slot);
-    return { m, top: slot * rowH, rowH, x: r(), tilt: jitter(r, 3) };
+  // seeded shuffle of the rows for this side of this game
+  const order = Array.from({ length: slots }, (_, i) => i);
+  const r = rng(gameId * 2 + (side === "home" ? 1 : 0));
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  const spots = writers.map((m) => {
+    const key = m.id ?? m.name;
+    const slot = order[everyone.indexOf(key)];
+    let h = gameId * 31 + (side === "home" ? 7 : 3);
+    for (const ch of key) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
+    const rr = rng(h);
+    return { m, top: slot * rowH, rowH, x: rr(), tilt: jitter(rr, 3) };
   });
   return { height, spots };
 }

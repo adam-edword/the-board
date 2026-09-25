@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchSchedule, type League } from "@/lib/espn";
-import { getMe, getWeekData, getWeeks } from "@/lib/data";
+import { getMe, getMembers, getWeekData, getWeeks } from "@/lib/data";
 import { kickoffLabel } from "@/lib/format";
 import { TeamLogo } from "@/components/team-logo";
 import { WeekPicker } from "@/components/week-picker";
@@ -16,6 +16,7 @@ import type { Profile } from "@/lib/types";
 import { createWeek, deleteWeek, refreshScores, removeGame, renameWeek, setFeatured, setMember } from "@/app/actions";
 import { ConfirmButton } from "@/components/confirm-button";
 import { AddGameButton } from "./add-game-button";
+import { PickFixer } from "./pick-fixer";
 
 export default async function AdminPage(props: PageProps<"/admin">) {
   const me = await getMe();
@@ -33,9 +34,10 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const supabase = await createClient();
   const { data: people } = await supabase.from("profiles").select("*").order("created_at");
 
-  const [weekData, schedule] = await Promise.all([
+  const [weekData, schedule, members] = await Promise.all([
     week ? getWeekData(week.id) : null,
     week ? fetchSchedule(league, { week: espnWeek, seasonType }).catch(() => null) : null,
+    getMembers(),
   ]);
   const added = new Set(weekData?.games.map((g) => g.espn_id));
   let browse = schedule?.games ?? [];
@@ -150,6 +152,28 @@ export default async function AdminPage(props: PageProps<"/admin">) {
               )}
             </CardContent>
           </Card>
+
+          {/* ------------------------------------------------ fix picks */}
+          {weekData.games.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>fix picks</CardTitle>
+                <CardDescription>
+                  set someone&apos;s picks for {week.label}, even after kickoff. anything changed here shows with an
+                  asterisk.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PickFixer
+                  weekId={week.id}
+                  games={weekData.games}
+                  picks={weekData.picks}
+                  adjustments={weekData.adjustments}
+                  members={members}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* ------------------------------------------------ browse espn */}
           <Card>

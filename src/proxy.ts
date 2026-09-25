@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const signedIn = !!data?.claims;
   const path = request.nextUrl.pathname;
-  const isPublic = ["/login", "/auth", "/api", "/terms", "/privacy"].some((p) => path.startsWith(p));
+  const isPublic = ["/login", "/auth", "/api", "/terms", "/privacy", "/manifest.webmanifest"].some((p) => path.startsWith(p));
 
   if (!signedIn && !isPublic) {
     return NextResponse.redirect(`${publicOrigin(request)}/login`);

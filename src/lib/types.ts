@@ -46,6 +46,8 @@ export type Adjustment = {
   points: number;
   correct: number | null;
   decided: number | null;
+  edited: boolean;
 };
 
-export type Pick = { user_id: string; game_id: number; side: Side; updated_at?: string };
+// edited = an admin changed it (shown with an asterisk)
+export type Pick = { user_id: string; game_id: number; side: Side; updated_at?: string; edited?: boolean };

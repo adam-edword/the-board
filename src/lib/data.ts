@@ -39,14 +39,14 @@ export async function getWeekData(weekId: number) {
   const supabase = await createClient();
   const [games, picks, status, adjustments] = await Promise.all([
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
-    supabase.from("picks").select("user_id, game_id, side, updated_at, games!inner(week_id)").eq("games.week_id", weekId),
+    supabase.from("picks").select("user_id, game_id, side, updated_at, edited, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
-    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided").eq("week_id", weekId),
+    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited").eq("week_id", weekId),
   ]);
   return {
     games: (games.data ?? []) as Game[],
     // only includes other people's picks for games that have kicked off (rls)
-    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at }) => ({ user_id, game_id, side, updated_at })) as Pick[],
+    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at, edited }) => ({ user_id, game_id, side, updated_at, edited })) as Pick[],
     // who has picked what game, sides hidden
     picked: (status.data ?? []) as { user_id: string; game_id: number }[],
     adjustments: (adjustments.data ?? []) as Adjustment[],
@@ -61,7 +61,7 @@ export async function getSeasonData(season: number) {
   if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[], adjustments: [] as Adjustment[] };
   const [{ data: games }, { data: adjustments }] = await Promise.all([
     supabase.from("games").select("*").in("week_id", ids),
-    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided").in("week_id", ids),
+    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited").in("week_id", ids),
   ]);
 
   // supabase caps a single response at 1000 rows, so page through a full season
@@ -70,13 +70,13 @@ export async function getSeasonData(season: number) {
   for (let from = 0; ; from += PAGE) {
     const { data } = await supabase
       .from("picks")
-      .select("user_id, game_id, side, games!inner(week_id)")
+      .select("user_id, game_id, side, edited, games!inner(week_id)")
       .in("games.week_id", ids)
       .order("game_id")
       .order("user_id")
       .range(from, from + PAGE - 1);
     const rows = data ?? [];
-    picks.push(...rows.map(({ user_id, game_id, side }) => ({ user_id, game_id, side }) as Pick));
+    picks.push(...rows.map(({ user_id, game_id, side, edited }) => ({ user_id, game_id, side, edited }) as Pick));
     if (rows.length < PAGE) break;
   }
 
@@ -85,12 +85,14 @@ export async function getSeasonData(season: number) {
 
 export function scorePicks(games: Game[], picks: Pick[], adjustments: Adjustment[] = []) {
   const byId = new Map(games.map((g) => [g.id, g]));
-  const totals = new Map<string, { points: number; correct: number; decided: number }>();
+  // edited = an admin fix touched this score, shown with an asterisk
+  const totals = new Map<string, { points: number; correct: number; decided: number; edited: boolean }>();
   for (const p of picks) {
     const g = byId.get(p.game_id);
     if (!g || g.status !== "post" || !g.winner) continue;
-    const t = totals.get(p.user_id) ?? { points: 0, correct: 0, decided: 0 };
+    const t = totals.get(p.user_id) ?? { points: 0, correct: 0, decided: 0, edited: false };
     t.decided++;
+    if (p.edited) t.edited = true;
     if (g.winner === p.side) {
       t.correct++;
       t.points += pointsFor(g);
@@ -99,8 +101,9 @@ export function scorePicks(games: Game[], picks: Pick[], adjustments: Adjustment
   }
   // adjustments have no individual picks behind them, just totals
   for (const a of adjustments) {
-    const t = totals.get(a.user_id) ?? { points: 0, correct: 0, decided: 0 };
+    const t = totals.get(a.user_id) ?? { points: 0, correct: 0, decided: 0, edited: false };
     t.points += a.points;
+    if (a.edited) t.edited = true;
     t.correct += a.correct ?? 0;
     t.decided += a.decided ?? 0;
     totals.set(a.user_id, t);

@@ -34,7 +34,7 @@ const markerFonts = [pangolin, protestRevolution, lacquer, fuzzyBubbles, gaegu, 
 export const metadata: Metadata = {
   title: "the board",
   description: "weekly football picks",
-  appleWebApp: { title: "the board", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "the board", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = { themeColor: "#0a0a0a" };
