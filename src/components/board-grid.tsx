@@ -54,7 +54,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
           for (const p of picks) {
             if (p.game_id !== g.id) continue;
             if (p.user_id === meId) mySide = p.side;
-            else others[p.side].push(markers.get(p.user_id) ?? { name: "?", color: "white", font: "kalam" });
+            else others[p.side].push(markers.get(p.user_id) ?? { name: "?", color: "white", font: "pangolin" });
           }
           others.home.sort((a, b) => a.name.localeCompare(b.name));
           others.away.sort((a, b) => a.name.localeCompare(b.name));
@@ -64,7 +64,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
               game={g}
               others={others}
               mySide={mySide}
-              me={markers.get(meId) ?? { name: "you", color: "white", font: "kalam" }}
+              me={markers.get(meId) ?? { name: "you", color: "white", font: "pangolin" }}
               pickedCount={picked.filter((p) => p.game_id === g.id).length}
               total={members.length}
             />

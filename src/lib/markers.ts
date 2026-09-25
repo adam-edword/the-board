@@ -15,12 +15,12 @@ export const MARKER_COLORS = {
 // css vars are set up by next/font in app/layout.tsx. size evens out how big
 // each font looks, some run much larger than others at the same px.
 export const MARKER_FONTS = {
-  kalam: { label: "kalam", family: "var(--font-kalam)", size: 15 },
-  "permanent-marker": { label: "permanent marker", family: "var(--font-permanent-marker)", size: 16 },
-  caveat: { label: "caveat", family: "var(--font-caveat)", size: 19 },
-  "rock-salt": { label: "rock salt", family: "var(--font-rock-salt)", size: 12 },
-  "gochi-hand": { label: "gochi hand", family: "var(--font-gochi-hand)", size: 16 },
-  "sedgwick-ave": { label: "sedgwick ave", family: "var(--font-sedgwick-ave)", size: 16 },
+  pangolin: { label: "pangolin", family: "var(--font-pangolin)", size: 15 },
+  "protest-revolution": { label: "protest revolution", family: "var(--font-protest-revolution)", size: 15 },
+  lacquer: { label: "lacquer", family: "var(--font-lacquer)", size: 14 },
+  "fuzzy-bubbles": { label: "fuzzy bubbles", family: "var(--font-fuzzy-bubbles)", size: 14 },
+  gaegu: { label: "gaegu", family: "var(--font-gaegu)", size: 18 },
+  "covered-by-your-grace": { label: "covered by your grace", family: "var(--font-covered-by-your-grace)", size: 17 },
 } as const;
 
 export type MarkerColor = keyof typeof MARKER_COLORS;
@@ -29,7 +29,7 @@ export type MarkerFont = keyof typeof MARKER_FONTS;
 export type Marker = { name: string; color: MarkerColor; font: MarkerFont };
 
 export function markerStyle(m: { color: MarkerColor; font: MarkerFont }): React.CSSProperties {
-  const font = MARKER_FONTS[m.font] ?? MARKER_FONTS.kalam;
+  const font = MARKER_FONTS[m.font] ?? MARKER_FONTS.pangolin;
   return { color: MARKER_COLORS[m.color] ?? MARKER_COLORS.white, fontFamily: font.family, fontSize: font.size };
 }
 

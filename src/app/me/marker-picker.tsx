@@ -42,7 +42,7 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
             <div className="border-b border-dashed pb-1.5 text-sm font-bold">{team}</div>
             <ul className="mt-1.5 min-h-10 space-y-0.5 leading-tight">
               {i === 0 && <li style={markerStyle({ color, font })}>{name}</li>}
-              {i === 1 && <li style={markerStyle({ color: "white", font: "kalam" })} className="opacity-50">someone</li>}
+              {i === 1 && <li style={markerStyle({ color: "white", font: "pangolin" })} className="opacity-50">someone</li>}
             </ul>
           </div>
         ))}
