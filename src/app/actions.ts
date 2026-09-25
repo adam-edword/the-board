@@ -32,7 +32,7 @@ export async function setPick(gameId: number, side: Side | null) {
   const { error } = side
     ? await supabase
         .from("picks")
-        .upsert({ user_id: me.id, game_id: gameId, side, edited: false, updated_at: new Date().toISOString() })
+        .upsert({ user_id: me.id, game_id: gameId, side, edited: false, auto: false, updated_at: new Date().toISOString() })
     : await supabase.from("picks").delete().eq("user_id", me.id).eq("game_id", gameId);
   if (error) return { error: "that game already kicked off" };
 
@@ -49,7 +49,8 @@ export async function adminSetPick(userId: string, gameId: number, side: Side | 
   const { error } = side
     ? await supabase
         .from("picks")
-        .upsert({ user_id: userId, game_id: gameId, side, edited: true, updated_at: new Date().toISOString() })
+        // an admin fix replaces a coin fill-in, so it's no longer "picked by the coin"
+        .upsert({ user_id: userId, game_id: gameId, side, edited: true, auto: false, updated_at: new Date().toISOString() })
     : await supabase.from("picks").delete().eq("user_id", userId).eq("game_id", gameId);
   if (error) return { error: "couldn't save that pick" };
   revalidatePath("/", "layout");

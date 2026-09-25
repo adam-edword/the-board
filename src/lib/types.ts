@@ -54,4 +54,12 @@ export type Adjustment = {
 };
 
 // edited = an admin changed it (shown with an asterisk)
-export type Pick = { user_id: string; game_id: number; side: Side; updated_at?: string; edited?: boolean };
+// auto = they missed it and the coin picked for them at kickoff
+export type Pick = {
+  user_id: string;
+  game_id: number;
+  side: Side;
+  updated_at?: string;
+  edited?: boolean;
+  auto?: boolean;
+};

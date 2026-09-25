@@ -75,7 +75,7 @@ export function PickFixer({ weekId, games, picks, adjustments, members }: {
                 </Button>
               ))}
               <span className={cn("ml-auto text-xs text-muted-foreground", p?.edited && "text-live")}>
-                {p ? (p.edited ? "edited*" : "their pick") : "no pick"}
+                {p ? (p.edited ? "edited*" : p.auto ? "coin picked" : "their pick") : "no pick"}
               </span>
               <Button
                 type="button"

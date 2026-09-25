@@ -63,14 +63,21 @@ export async function getWeekData(weekId: number) {
   const supabase = await createClient();
   const [games, picks, status, adjustments] = await Promise.all([
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
-    supabase.from("picks").select("user_id, game_id, side, updated_at, edited, games!inner(week_id)").eq("games.week_id", weekId),
+    supabase.from("picks").select("user_id, game_id, side, updated_at, edited, auto, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
     supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited, cfb_points, nfl_points").eq("week_id", weekId),
   ]);
   return {
     games: (games.data ?? []) as Game[],
     // only includes other people's picks for games that have kicked off (rls)
-    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at, edited }) => ({ user_id, game_id, side, updated_at, edited })) as Pick[],
+    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at, edited, auto }) => ({
+      user_id,
+      game_id,
+      side,
+      updated_at,
+      edited,
+      auto,
+    })) as Pick[],
     // who has picked what game, sides hidden
     picked: (status.data ?? []) as { user_id: string; game_id: number }[],
     adjustments: (adjustments.data ?? []) as Adjustment[],
@@ -94,13 +101,13 @@ export async function getSeasonData(season: number) {
   for (let from = 0; ; from += PAGE) {
     const { data } = await supabase
       .from("picks")
-      .select("user_id, game_id, side, edited, games!inner(week_id)")
+      .select("user_id, game_id, side, edited, auto, games!inner(week_id)")
       .in("games.week_id", ids)
       .order("game_id")
       .order("user_id")
       .range(from, from + PAGE - 1);
     const rows = data ?? [];
-    picks.push(...rows.map(({ user_id, game_id, side, edited }) => ({ user_id, game_id, side, edited }) as Pick));
+    picks.push(...rows.map(({ user_id, game_id, side, edited, auto }) => ({ user_id, game_id, side, edited, auto }) as Pick));
     if (rows.length < PAGE) break;
   }
 

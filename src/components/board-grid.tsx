@@ -84,15 +84,17 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
           let mySide: Side | null = null;
           let myAt: string | undefined;
           let myEdited: boolean | undefined;
+          let myAuto: boolean | undefined;
           for (const p of picks) {
             if (p.game_id !== g.id) continue;
             if (p.user_id === meId) {
               mySide = p.side;
               myAt = p.updated_at;
               myEdited = p.edited;
+              myAuto = p.auto;
             } else {
               const m = markers.get(p.user_id) ?? { name: "?", color: "white" as const, font: "pangolin" as const };
-              others[p.side].push({ ...m, at: p.updated_at, edited: p.edited });
+              others[p.side].push({ ...m, at: p.updated_at, edited: p.edited, auto: p.auto });
             }
           }
 
@@ -102,7 +104,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
               game={g}
               others={others}
               mySide={mySide}
-              me={{ ...(markers.get(meId) ?? { name: "you", color: "white", font: "pangolin" }), at: myAt, edited: myEdited }}
+              me={{ ...(markers.get(meId) ?? { name: "you", color: "white", font: "pangolin" }), at: myAt, edited: myEdited, auto: myAuto }}
               pickedCount={picked.filter((p) => p.game_id === g.id).length}
               total={members.length}
               roster={roster}

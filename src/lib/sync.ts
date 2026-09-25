@@ -75,5 +75,8 @@ export async function syncScores({ force = false } = {}) {
     }),
   );
 
-  return { updated: results.filter((r) => r.status === "fulfilled").length, of: stale.length };
+  // anyone who missed a pick on a game that's now started gets coin's side
+  const { data: filled } = await db.rpc("fill_missed_picks");
+
+  return { updated: results.filter((r) => r.status === "fulfilled").length, of: stale.length, filled };
 }

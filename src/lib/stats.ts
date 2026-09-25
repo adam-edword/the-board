@@ -86,10 +86,13 @@ export function seasonStats(
     const s = get(p.user_id);
     if (p.edited) s.edited = true;
     addPts(p.user_id, g.week_id, 0); // mark as played
-    const abbr = p.side === "home" ? g.home_abbr : g.away_abbr;
-    const tc = teamCounts.get(p.user_id) ?? new Map<string, number>();
-    tc.set(abbr, (tc.get(abbr) ?? 0) + 1);
-    teamCounts.set(p.user_id, tc);
+    // coin fill-ins score like any pick, but they weren't the person's call
+    if (!p.auto) {
+      const abbr = p.side === "home" ? g.home_abbr : g.away_abbr;
+      const tc = teamCounts.get(p.user_id) ?? new Map<string, number>();
+      tc.set(abbr, (tc.get(abbr) ?? 0) + 1);
+      teamCounts.set(p.user_id, tc);
+    }
     if (g.status !== "post" || !g.winner) continue;
     s.decided++;
     // a tie counts as right for everyone who picked the game
@@ -119,7 +122,7 @@ export function seasonStats(
   // contrarian vs crowd, humans only, needs at least two other people on the game
   for (const [gid, ps] of picksByGame) {
     const g = byGame.get(gid)!;
-    const humanPicks = ps.filter((p) => humans.has(p.user_id));
+    const humanPicks = ps.filter((p) => humans.has(p.user_id) && !p.auto);
     for (const p of humanPicks) {
       const others = humanPicks.filter((o) => o.user_id !== p.user_id);
       if (others.length < 2) continue;

@@ -151,6 +151,11 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
                         >
                           {m.name}
                           {m.edited && <span title="edited by the admin">*</span>}
+                          {m.auto && (
+                            <span title="missed this one, the coin picked for them">
+                              <CoinIcon className="ml-1 size-[0.75em] align-[0.05em]" />
+                            </span>
+                          )}
                         </span>
                         <span style={{ flexGrow: 1 - x }} />
                       </li>

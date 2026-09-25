@@ -27,7 +27,17 @@ export type MarkerColor = keyof typeof MARKER_COLORS;
 export type MarkerFont = keyof typeof MARKER_FONTS;
 
 // `at` is when they wrote it (pick time), used to place names like a real whiteboard
-export type Marker = { id?: string; name: string; color: MarkerColor; font: MarkerFont; bot?: boolean; at?: string; edited?: boolean };
+// auto = the coin picked this for them because they missed it
+export type Marker = {
+  id?: string;
+  name: string;
+  color: MarkerColor;
+  font: MarkerFont;
+  bot?: boolean;
+  at?: string;
+  edited?: boolean;
+  auto?: boolean;
+};
 
 export function markerStyle(m: { color: MarkerColor; font: MarkerFont }): React.CSSProperties {
   const font = MARKER_FONTS[m.font] ?? MARKER_FONTS.pangolin;
