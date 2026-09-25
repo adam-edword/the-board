@@ -29,7 +29,7 @@ see `.env.example`: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET
 set `CRON_SECRET` and `DISCORD_WEBHOOK_URL`, then add a coolify scheduled task (app > scheduled tasks) that runs every 15 minutes (`*/15 * * * *`):
 
 ```sh
-wget -qO- --header="Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron
+wget -qO- --header="Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron
 ```
 
 each run syncs scores and posts whatever is due. `public.notifications` remembers what went out, so every reminder / report posts once per week.
