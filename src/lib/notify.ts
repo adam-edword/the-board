@@ -178,11 +178,16 @@ async function reportEmbed(db: Db, week: Week): Promise<Embed | null> {
     lines.push(`🪙 the coin got **${coinPts}**. ${verdict}`);
   }
 
-  // this week's scores, best first (ties share a rank)
-  const weekRows = humans.map((m) => [rank(humans.map((h) => pts.get(h.id)!), pts.get(m.id)!), name(m), pts.get(m.id)!]);
+  const stats = seasonStats(season.weeks, season.games, season.picks, season.adjustments, members);
+
+  // this week's scores, best first (ties share a rank), split like the
+  // standings page's weekly breakdown
+  const weekRows = humans.map((m) => {
+    const line = stats.get(m.id)?.weeks.find((l) => l.week.id === week.id);
+    return [rank(humans.map((h) => pts.get(h.id)!), pts.get(m.id)!), name(m), line?.cfb ?? 0, line?.nfl ?? 0, pts.get(m.id)!];
+  });
 
   // season standings, same order as the standings page
-  const stats = seasonStats(season.weeks, season.games, season.picks, season.adjustments, members);
   const standing = members
     .map((m) => ({ m, s: stats.get(m.id)! }))
     .sort((a, b) => b.s.points - a.s.points || b.s.correct / (b.s.decided || 1) - a.s.correct / (a.s.decided || 1));
@@ -199,7 +204,7 @@ async function reportEmbed(db: Db, week: Week): Promise<Embed | null> {
     color: AMBER,
     description: lines.join("\n"),
     fields: [
-      { name: week.label, value: table(["#", "name", "pts"], weekRows) },
+      { name: week.label, value: table(["#", "name", "college", "nfl", "total"], weekRows) },
       { name: `${week.season} standings`, value: table(["#", "name", "pts", "wk"], seasonRows) },
     ],
     footer: { text: "the board" },
