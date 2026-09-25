@@ -1,9 +1,15 @@
 import { cn } from "@/lib/utils";
 
 // a little hand-drawn coin for the coin-flip player. slightly lopsided on purpose.
-export function CoinIcon({ className }: { className?: string }) {
+export function CoinIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden className={cn("inline-block size-[1.1em] shrink-0 align-[-0.2em]", className)}>
+    <svg
+      viewBox="0 0 24 24"
+      role="img"
+      aria-label="coin"
+      style={style}
+      className={cn("inline-block size-[1.1em] shrink-0 align-[-0.2em]", className)}
+    >
       <path
         d="M12.3 2.4c5.3.1 9.4 4.3 9.2 9.7-.2 5.2-4.4 9.6-9.8 9.5-5.3-.1-9.4-4.6-9.3-9.8.1-5.1 4.6-9.5 9.9-9.4z"
         fill="#facc15"

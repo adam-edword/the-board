@@ -48,6 +48,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
   const tilt = { rotate: jitter(r, 0.7), x: jitter(r, 1.5), y: jitter(r, 1.5) };
   const divider = wobblyLine(r, true, 1.2);
   const underlines = { away: wobblyLine(r, false, 8), home: wobblyLine(r, false, 8) };
+  const coinTilt = jitter(r, 25);
 
   // pickedCount comes from the server, adjust it for an unsaved optimistic change
   const count = pickedCount + (side && !mySide ? 1 : 0) - (!side && mySide ? 1 : 0);
@@ -86,7 +87,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
               aria-pressed={mine}
               aria-label={`pick ${s === "home" ? g.home_name : g.away_name}`}
               className={cn(
-                "flex min-h-36 flex-col p-2 text-left outline-none transition-colors",
+                "relative flex min-h-36 flex-col p-2 text-left outline-none transition-colors",
                 "focus-visible:bg-muted/60 disabled:cursor-default",
                 !locked && "hover:bg-muted/40 active:bg-muted/60",
                 won && "bg-win/10",
@@ -115,17 +116,23 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
                 </svg>
               </div>
               <ul className="mt-1.5 w-full space-y-0.5 leading-tight">
-                {(mine ? [me, ...others[s]] : others[s]).map((m, i) => (
+                {(mine ? [me, ...others[s]] : others[s]).filter((m) => !m.bot).map((m, i) => (
                   <li
                     key={i}
                     style={{ ...markerStyle(m), ...handwriting(g.id, m.name) }}
                     className={cn("truncate origin-left", lost && "line-through decoration-2 opacity-45")}
                   >
-                    {m.bot && <CoinIcon className="mr-1" />}
                     {m.name}
                   </li>
                 ))}
               </ul>
+              {others[s].some((m) => m.bot) && (
+                // the coin flip lands in the corner of whichever side it picked
+                <CoinIcon
+                  className={cn("absolute right-2 bottom-2 size-7", lost && "opacity-40")}
+                  style={{ transform: `rotate(${coinTilt}deg)` }}
+                />
+              )}
             </button>
           );
         })}
