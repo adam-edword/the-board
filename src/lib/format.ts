@@ -21,6 +21,11 @@ export function pointsFor(game: { featured: boolean }) {
   return game.featured ? 2 : 1;
 }
 
+// a pick is right if its team won. a tie counts for everyone who picked the game.
+export function pickIsRight(game: { status: string; winner: string | null }, side: "home" | "away") {
+  return game.status === "post" && (game.winner === side || game.winner === "tie");
+}
+
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || name;
 }

@@ -76,8 +76,9 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
           <path d={divider} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
         {(["away", "home"] as Side[]).map((s) => {
-          const won = final && g.winner === s;
-          const lost = final && !!g.winner && g.winner !== s && g.winner !== "tie";
+          // on a tie both sides count as right
+          const won = final && (g.winner === s || g.winner === "tie");
+          const lost = final && !!g.winner && !won;
           const mine = side === s;
           const score = s === "home" ? g.home_score : g.away_score;
           const rank = s === "home" ? g.home_rank : g.away_rank;

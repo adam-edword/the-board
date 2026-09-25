@@ -1,4 +1,4 @@
-import { pointsFor } from "@/lib/format";
+import { pickIsRight, pointsFor } from "@/lib/format";
 import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
 
 // season stats for the standings table and player pages. everything is derived
@@ -82,10 +82,10 @@ export function seasonStats(
     const tc = teamCounts.get(p.user_id) ?? new Map<string, number>();
     tc.set(abbr, (tc.get(abbr) ?? 0) + 1);
     teamCounts.set(p.user_id, tc);
-    // ties and unfinished games don't count as right or wrong
-    if (g.status !== "post" || !g.winner || g.winner === "tie") continue;
+    if (g.status !== "post" || !g.winner) continue;
     s.decided++;
-    const right = g.winner === p.side;
+    // a tie counts as right for everyone who picked the game
+    const right = pickIsRight(g, p.side);
     if (right) {
       s.correct++;
       s.points += pointsFor(g);

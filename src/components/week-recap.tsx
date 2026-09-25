@@ -1,5 +1,5 @@
 import { StarIcon, TrendingDownIcon, TrophyIcon, ZapIcon } from "lucide-react";
-import { firstName, pointsFor } from "@/lib/format";
+import { firstName, pickIsRight, pointsFor } from "@/lib/format";
 import { markerStyle, type Marker } from "@/lib/markers";
 import type { Adjustment, Game, Pick, Profile } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ export function WeekRecap({ label, games, picks, adjustments, members }: {
   const pts = new Map<string, number>();
   for (const p of picks) {
     const g = byGame.get(p.game_id);
-    pts.set(p.user_id, (pts.get(p.user_id) ?? 0) + (g?.winner === p.side ? pointsFor(g) : 0));
+    pts.set(p.user_id, (pts.get(p.user_id) ?? 0) + (g && pickIsRight(g, p.side) ? pointsFor(g) : 0));
   }
   for (const a of adjustments) pts.set(a.user_id, (pts.get(a.user_id) ?? 0) + a.points);
 

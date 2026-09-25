@@ -7,7 +7,7 @@ live at https://theboard.eddtv.org (self-hosted on coolify, auto-deploys from `m
 ## what it does
 
 - **the board:** one tile per game. tap a side to write your name under it in your own marker color + font. picks lock at kickoff. names are hand-drawn-ish and never overlap.
-- **scoring:** 1 point per correct pick, 2 for the week's featured game. scores and results come from espn automatically.
+- **scoring:** 1 point per correct pick, 2 for the week's featured game. a tie counts as right for everyone who picked the game. scores and results come from espn automatically.
 - **coin:** a bot player that flips a random side on every game. it shows up as a coin in the corner of the side it took.
 - **standings:** points, record, week wins, weeks beating the coin, and a "contra" stat. past seasons stay viewable, with a champion banner.
 - **player pages:** tap a name for their season: points by week, featured record, picking style.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { firstName, pointsFor } from "@/lib/format";
+import { firstName, pickIsRight, pointsFor } from "@/lib/format";
 import type { Adjustment, Game, Pick, Profile, Side } from "@/lib/types";
 import type { Marker } from "@/lib/markers";
 import { BoardTile } from "./board-tile";
@@ -25,7 +25,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
   const byGame = new Map(games.map((g) => [g.id, g]));
   for (const p of picks) {
     const g = byGame.get(p.game_id);
-    if (g?.status === "post" && g.winner === p.side) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + pointsFor(g));
+    if (g && pickIsRight(g, p.side)) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + pointsFor(g));
   }
   for (const a of adjustments) totals.set(a.user_id, (totals.get(a.user_id) ?? 0) + a.points);
   // anyone whose score this week includes an admin fix gets an asterisk
