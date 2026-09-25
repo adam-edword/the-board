@@ -9,14 +9,7 @@ import type { Week } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const ADMIN_TABS = [
-  { key: "games", label: "games" },
-  { key: "fix", label: "fix picks" },
-  { key: "people", label: "people" },
-  { key: "week", label: "week settings" },
-  { key: "season", label: "season" },
-] as const;
-export type AdminTab = (typeof ADMIN_TABS)[number]["key"];
+import { ADMIN_TABS, type AdminTab } from "./admin-tabs";
 
 // week chips + section tabs. tabs switch instantly (everything is already
 // rendered); the url is kept in sync so a refresh lands on the same tab.
