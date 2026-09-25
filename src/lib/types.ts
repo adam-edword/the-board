@@ -39,6 +39,13 @@ export type Game = {
 
 export type Side = "home" | "away";
 // flat points for a week, for old whiteboard weeks where only totals are known
-export type Adjustment = { user_id: string; week_id: number; points: number };
+// correct/decided are the right-wrong record behind it, when known
+export type Adjustment = {
+  user_id: string;
+  week_id: number;
+  points: number;
+  correct: number | null;
+  decided: number | null;
+};
 
 export type Pick = { user_id: string; game_id: number; side: Side; updated_at?: string };

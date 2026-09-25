@@ -41,7 +41,7 @@ export async function getWeekData(weekId: number) {
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
     supabase.from("picks").select("user_id, game_id, side, updated_at, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
-    supabase.from("score_adjustments").select("user_id, week_id, points").eq("week_id", weekId),
+    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided").eq("week_id", weekId),
   ]);
   return {
     games: (games.data ?? []) as Game[],
@@ -61,7 +61,7 @@ export async function getSeasonData(season: number) {
   if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[], adjustments: [] as Adjustment[] };
   const [{ data: games }, { data: adjustments }] = await Promise.all([
     supabase.from("games").select("*").in("week_id", ids),
-    supabase.from("score_adjustments").select("user_id, week_id, points").in("week_id", ids),
+    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided").in("week_id", ids),
   ]);
 
   // supabase caps a single response at 1000 rows, so page through a full season
@@ -97,10 +97,12 @@ export function scorePicks(games: Game[], picks: Pick[], adjustments: Adjustment
     }
     totals.set(p.user_id, t);
   }
-  // adjustments only add points; there are no individual picks behind them
+  // adjustments have no individual picks behind them, just totals
   for (const a of adjustments) {
     const t = totals.get(a.user_id) ?? { points: 0, correct: 0, decided: 0 };
     t.points += a.points;
+    t.correct += a.correct ?? 0;
+    t.decided += a.decided ?? 0;
     totals.set(a.user_id, t);
   }
   return totals;
