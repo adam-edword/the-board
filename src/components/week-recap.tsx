@@ -46,10 +46,11 @@ export function WeekRecap({ label, games, picks, adjustments, members }: {
     if (share < 0.5 && (!upset || share < upset.had.length / upset.total)) upset = { game: g, had, total: onIt.length };
   }
 
-  const featured = games.find((g) => g.featured && g.status === "post" && g.winner && g.winner !== "tie");
+  const featured = games.find((g) => g.featured && g.status === "post" && g.winner);
+  const featuredTie = featured?.winner === "tie";
   const featuredHad = featured
     ? picks
-        .filter((p) => p.game_id === featured.id && p.side === featured.winner && humanIds.has(p.user_id))
+        .filter((p) => p.game_id === featured.id && pickIsRight(featured, p.side) && humanIds.has(p.user_id))
         .map((p) => members.find((m) => m.id === p.user_id)!)
     : [];
 
@@ -85,7 +86,13 @@ export function WeekRecap({ label, games, picks, adjustments, members }: {
           <p className="flex items-baseline gap-2">
             <StarIcon className="size-4 shrink-0 translate-y-0.5 fill-live text-live" />
             <span>
-              featured: <b>{team(featured, featured.winner as "home" | "away")}</b> won.{" "}
+              {featuredTie ? (
+                <>featured game ended in a tie. </>
+              ) : (
+                <>
+                  featured: <b>{team(featured, featured.winner as "home" | "away")}</b> won.{" "}
+                </>
+              )}
               {featuredHad.length ? (
                 <>
                   <Names list={featuredHad} /> cashed the double
