@@ -42,10 +42,9 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
     });
   }
 
-  // every tile gets its own slight tilt and hand-drawn lines, seeded by the game
-  // so it looks the same on every load
+  // every tile gets its own hand-drawn lines, seeded by the game so it looks
+  // the same on every load
   const r = rng(g.id * 7919);
-  const tilt = { rotate: jitter(r, 0.7), x: jitter(r, 1.5), y: jitter(r, 1.5) };
   const divider = wobblyLine(r, true, 1.2);
   const underlines = { away: wobblyLine(r, false, 8), home: wobblyLine(r, false, 8) };
   const coinTilt = jitter(r, 25);
@@ -56,7 +55,6 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
   return (
     <Card
       size="sm"
-      style={{ transform: `translate(${tilt.x}px, ${tilt.y}px) rotate(${tilt.rotate}deg)` }}
       className={cn(
         "gap-0 py-0",
         g.featured && "ring-2 ring-live/60",
@@ -68,9 +66,9 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
           aria-hidden
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
-          className="pointer-events-none absolute top-1.5 left-1/2 h-[calc(100%-0.75rem)] w-3 -translate-x-1/2 text-foreground/35"
+          className="pointer-events-none absolute top-1.5 left-1/2 h-[calc(100%-0.75rem)] w-3 -translate-x-1/2 text-foreground/20"
         >
-          <path d={divider} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <path d={divider} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
         {(["away", "home"] as Side[]).map((s) => {
           const won = final && g.winner === s;
@@ -129,7 +127,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
               {others[s].some((m) => m.bot) && (
                 // the coin flip lands in the corner of whichever side it picked
                 <CoinIcon
-                  className={cn("absolute right-2 bottom-2 size-7", lost && "opacity-40")}
+                  className={cn("absolute right-2 bottom-2 size-5", lost && "opacity-40")}
                   style={{ transform: `rotate(${coinTilt}deg)` }}
                 />
               )}
