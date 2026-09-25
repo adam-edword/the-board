@@ -102,7 +102,7 @@ export function MarkerFields({ name, color, font, taken, onColor, onFont }: {
                   "relative grid size-9 place-items-center rounded-full ring-offset-2 ring-offset-background transition outline-none",
                   "focus-visible:ring-3 focus-visible:ring-ring/50",
                   color === c && "ring-2 ring-foreground",
-                  lockedBy && "cursor-not-allowed opacity-30",
+                  lockedBy && "cursor-not-allowed",
                 )}
                 style={{ backgroundColor: MARKER_COLORS[c] }}
               >
