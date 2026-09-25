@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <TooltipProvider>
           {me && (
             <header className="sticky top-0 z-20 border-b bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
-              <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-4">
+              <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
                 <Link href="/" className="mr-auto flex items-center gap-2 font-heading text-base font-semibold tracking-tight">
                   <span className="grid size-7 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
                     tb
@@ -59,8 +59,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               </div>
             </header>
           )}
-          <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
-          <footer className="mx-auto max-w-3xl px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] text-center text-[11px] text-muted-foreground/60">
+          <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+          <footer className="mx-auto max-w-6xl px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] text-center text-[11px] text-muted-foreground/60">
             {versionLabel()}
           </footer>
           <Toaster theme="dark" position="top-center" />

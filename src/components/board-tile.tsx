@@ -85,22 +85,27 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
               aria-pressed={mine}
               aria-label={`pick ${s === "home" ? g.home_name : g.away_name}`}
               className={cn(
-                "relative flex min-h-36 flex-col p-2 text-left outline-none transition-colors",
+                "relative flex flex-col p-3 text-left outline-none transition-colors",
                 "focus-visible:bg-muted/60 disabled:cursor-default",
                 !locked && "hover:bg-muted/40 active:bg-muted/60",
                 won && "bg-win/10",
               )}
             >
               <div className="relative w-full pb-2">
-                <div className="flex items-center gap-1.5">
-                  <TeamLogo src={s === "home" ? g.home_logo : g.away_logo} size={18} />
-                  <span className={cn("truncate text-sm font-bold", won && "text-win", lost && "text-muted-foreground")}>
-                    {rank && <span className="mr-0.5 text-[10px] font-normal text-muted-foreground">{rank}</span>}
-                    {s === "home" ? g.home_abbr : g.away_abbr}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <TeamLogo src={s === "home" ? g.home_logo : g.away_logo} size={26} />
+                  <div className="min-w-0">
+                    <div className={cn("truncate text-base leading-tight font-bold", won && "text-win", lost && "text-muted-foreground")}>
+                      {rank && <span className="mr-1 text-xs font-normal text-muted-foreground">#{rank}</span>}
+                      {s === "home" ? g.home_abbr : g.away_abbr}
+                    </div>
+                    <div className="truncate text-[11px] leading-tight text-muted-foreground">
+                      {s === "home" ? g.home_name : g.away_name}
+                    </div>
+                  </div>
                 </div>
                 {g.status !== "pre" && g.status !== "void" && (
-                  <div className={cn("mt-0.5 font-mono text-lg leading-none font-semibold tabular-nums", won && "text-win", lost && "text-muted-foreground")}>
+                  <div className={cn("mt-1 font-mono text-xl leading-none font-semibold tabular-nums", won && "text-win", lost && "text-muted-foreground")}>
                     {score ?? 0}
                   </div>
                 )}
@@ -117,22 +122,22 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
                 const coinHere = others[s].some((m) => m.bot);
                 // an optimistic switch hasn't been saved yet, so it counts as the newest pick
                 const writers = [...(mine ? [{ ...me, at: side === mySide ? me.at : undefined }] : []), ...others[s]];
-                const { rows, spots } = placeNames(g.id, writers.filter((m) => !m.bot), coinHere);
+                const { height, spots } = placeNames(g.id, writers.filter((m) => !m.bot), coinHere);
                 return (
-                  <ul className="relative mt-1.5 w-full" style={{ height: rows * ROW }}>
-                    {spots.map(({ m, row, x, tilt }) => (
+                  <ul className="relative mt-2 w-full" style={{ height }}>
+                    {spots.map(({ m, top, rowH, x, tilt }) => (
                       // full-width row; the two flexible spacers push the name to a random
                       // spot left-to-right, but it can never spill out of its side
-                      <li key={`${m.name}-${row}`} className="absolute inset-x-0 flex" style={{ top: row * ROW, height: ROW }}>
+                      <li key={`${m.name}-${top}`} className="absolute inset-x-0 flex items-center" style={{ top, height: rowH }}>
                         <span style={{ flexGrow: x }} />
                         <span
                           style={{
-                            ...markerStyle(m),
+                            ...bigger(markerStyle(m)),
                             transform: `rotate(${tilt}deg)`,
                             textShadow: "0 0 1.5px color-mix(in oklab, currentColor 45%, transparent)",
                           }}
                           className={cn(
-                            "min-w-0 truncate leading-[22px] whitespace-nowrap",
+                            "min-w-0 truncate leading-none whitespace-nowrap py-0.5",
                             lost && "line-through decoration-2 opacity-45",
                           )}
                         >
@@ -147,7 +152,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
               {others[s].some((m) => m.bot) && (
                 // the coin flip lands in the corner of whichever side it picked
                 <CoinIcon
-                  className={cn("absolute right-2 bottom-2 size-5", lost && "opacity-40")}
+                  className={cn("absolute right-3 bottom-3 size-6", lost && "opacity-40")}
                   style={{ transform: `rotate(${coinTilt}deg)` }}
                 />
               )}
@@ -173,28 +178,41 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
   );
 }
 
-// names get scattered around their side like a real whiteboard. each side is
-// split into invisible rows and every name gets its own row, so nothing can
-// overlap. people who picked earlier get first dibs on their favorite spot, so
-// your name stays put when someone else adds theirs. the bottom row is left
-// empty when the coin is sitting in that corner.
-const ROW = 22;
+// names get scattered around their side like a real whiteboard. the name area
+// is a fixed height split into invisible rows, one name per row, so nothing
+// overlaps. when a side gets crowded the rows squeeze together (names can get
+// close, never on top of each other) and only past that does the tile grow.
+// people who picked earlier get first dibs on their spot so names don't jump
+// around, and the bottom-right is left clear when the coin landed there.
+const ROW = 30; // roomy row height
+const MIN_ROW = 19; // how tight rows can squeeze before the tile grows
+const ROWS = 6; // fixed height, in roomy rows
 
 function placeNames(gameId: number, writers: Marker[], coinHere: boolean) {
   const byTime = [...writers].sort(
     (a, b) => (a.at ? Date.parse(a.at) : Infinity) - (b.at ? Date.parse(b.at) : Infinity) || a.name.localeCompare(b.name),
   );
-  const usable = Math.max(4 - (coinHere ? 1 : 0), byTime.length + 1);
-  const rows = usable + (coinHere ? 1 : 0);
+  const coinSpace = coinHere ? ROW : 0;
+  const room = ROWS * ROW - coinSpace;
+  // leave a spare row or two for randomness while there's space, then squeeze
+  const slots = Math.max(Math.floor(room / ROW), byTime.length);
+  const rowH = Math.max(MIN_ROW, Math.min(ROW, room / slots));
+  const height = Math.max(ROWS * ROW, slots * rowH + coinSpace);
+
   const taken = new Set<number>();
   const spots = byTime.map((m) => {
     let h = gameId;
     for (const ch of m.name) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
     const r = rng(h);
-    let row = Math.floor(r() * usable);
-    while (taken.has(row)) row = (row + 1) % usable;
-    taken.add(row);
-    return { m, row, x: r(), tilt: jitter(r, 3) };
+    let slot = Math.floor(r() * slots);
+    while (taken.has(slot)) slot = (slot + 1) % slots;
+    taken.add(slot);
+    return { m, top: slot * rowH, rowH, x: r(), tilt: jitter(r, 3) };
   });
-  return { rows, spots };
+  return { height, spots };
+}
+
+// names read a bit bigger now that tiles are bigger
+function bigger(style: React.CSSProperties): React.CSSProperties {
+  return { ...style, fontSize: Math.round(Number(style.fontSize ?? 15) * 1.2) };
 }

@@ -42,7 +42,7 @@ export default async function StandingsPage() {
     .sort((a, b) => b.points - a.points || b.pct - a.pct);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">{season} standings</h1>
 
       <Card className="py-0">

@@ -49,7 +49,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {games.map((g) => {
           const others: Record<Side, Marker[]> = { home: [], away: [] };
           let mySide: Side | null = null;

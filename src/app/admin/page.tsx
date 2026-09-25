@@ -65,7 +65,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const chip = (active: boolean) => (active ? "secondary" : "ghost") as "secondary" | "ghost";
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">admin</h1>
 
       {/* ------------------------------------------------ weeks */}

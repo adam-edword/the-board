@@ -13,7 +13,7 @@ export default async function MePage() {
   if (!me) redirect("/login");
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">your marker</CardTitle>
