@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
 import { seasonStats } from "@/lib/stats";
@@ -23,10 +24,14 @@ export const getMe = cache(async () => {
   return { ...data, email } as Profile;
 });
 
+// the loaders below read as the signed-in viewer (rls applies). the cron job
+// passes the admin client instead, since it has no viewer.
+type Db = SupabaseClient;
+
 // weeks sort by their first kickoff (newest first), so a back-filled old week
 // doesn't jump ahead of the current one. brand new weeks with no games go on top.
-export async function getWeeks() {
-  const supabase = await createClient();
+export async function getWeeks(db?: Db) {
+  const supabase = db ?? (await createClient());
   const { data } = await supabase.from("weeks").select("*, games(kickoff)");
   const start = (w: { games: { kickoff: string }[] }) =>
     w.games.length ? Math.min(...w.games.map((g) => new Date(g.kickoff).getTime())) : Infinity;
@@ -72,8 +77,8 @@ export async function getChampions(season: number) {
   return best > 0 ? { points: best, champs: humans.filter((m) => stats.get(m.id)?.points === best) } : null;
 }
 
-export async function getMembers() {
-  const supabase = await createClient();
+export async function getMembers(db?: Db) {
+  const supabase = db ?? (await createClient());
   const { data } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
@@ -82,8 +87,8 @@ export async function getMembers() {
   return (data ?? []).map((p) => ({ ...p, email: null })) as Profile[];
 }
 
-export async function getWeekData(weekId: number) {
-  const supabase = await createClient();
+export async function getWeekData(weekId: number, db?: Db) {
+  const supabase = db ?? (await createClient());
   const [games, picks, status, adjustments] = await Promise.all([
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
     supabase.from("picks").select("user_id, game_id, side, updated_at, edited, auto, games!inner(week_id)").eq("games.week_id", weekId),
@@ -108,9 +113,9 @@ export async function getWeekData(weekId: number) {
 }
 
 /** every visible pick + game for a season, for standings */
-export async function getSeasonData(season: number) {
-  const supabase = await createClient();
-  const weeks = (await getWeeks()).filter((w) => w.season === season).reverse();
+export async function getSeasonData(season: number, db?: Db) {
+  const supabase = db ?? (await createClient());
+  const weeks = (await getWeeks(db)).filter((w) => w.season === season).reverse();
   const ids = weeks.map((w) => w.id);
   if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[], adjustments: [] as Adjustment[] };
   const [{ data: games }, { data: adjustments }] = await Promise.all([
