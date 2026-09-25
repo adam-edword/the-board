@@ -107,9 +107,6 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
               <TableHead className="w-8">#</TableHead>
               <TableHead>name</TableHead>
               <TableHead className="text-right">pts</TableHead>
-              <TableHead className="text-right" title="points from their own picks, without anything the coin gave them">
-                true pts
-              </TableHead>
               <TableHead className="text-right">right</TableHead>
               <TableHead className="text-right">wrong</TableHead>
               <TableHead className="text-right">%</TableHead>
@@ -121,6 +118,9 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
                   beat <CoinIcon />
                 </TableHead>
               )}
+              <TableHead className="text-right" title="points from their own picks, without anything the coin gave them">
+                true pts
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,7 +144,6 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
                   {s.points}
                   {s.edited && <span title="includes an admin edit">*</span>}
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{s.truePoints}</TableCell>
                 <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{s.correct}</TableCell>
                 <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{s.decided - s.correct}</TableCell>
                 <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{pct(s.correct, s.decided)}</TableCell>
@@ -152,6 +151,7 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
                 {hasCoin && (
                   <TableCell className="text-right font-mono tabular-nums">{m.is_bot ? "–" : s.vsCoin.w}</TableCell>
                 )}
+                <TableCell className="text-right font-mono text-muted-foreground tabular-nums">{s.truePoints}</TableCell>
               </TableRow>
             ))}
           </TableBody>
