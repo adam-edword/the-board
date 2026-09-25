@@ -42,7 +42,7 @@ export default async function BoardPage(props: PageProps<"/">) {
   }
 
   const week = weeks.find((w) => String(w.id) === sp.week) ?? weeks[0];
-  const [{ games, picks, picked }, members] = await Promise.all([getWeekData(week.id), getMembers()]);
+  const [{ games, picks, picked, adjustments }, members] = await Promise.all([getWeekData(week.id), getMembers()]);
 
   const mine = new Map(picks.filter((p) => p.user_id === me.id).map((p) => [p.game_id, p.side]));
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
@@ -78,7 +78,7 @@ export default async function BoardPage(props: PageProps<"/">) {
         <Empty>no games added to this week yet.</Empty>
       ) : (
         <>
-          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} />
+          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} />
           <p className="text-center text-xs text-muted-foreground">
             tap a side to put your name on it, tap again to erase. picks lock at kickoff.
           </p>

@@ -13,9 +13,9 @@ export default async function StandingsPage() {
 
   const weeks = await getWeeks();
   const season = weeks[0]?.season ?? new Date().getFullYear();
-  const [{ weeks: seasonWeeks, games, picks }, members] = await Promise.all([getSeasonData(season), getMembers()]);
+  const [{ weeks: seasonWeeks, games, picks, adjustments }, members] = await Promise.all([getSeasonData(season), getMembers()]);
 
-  const season_ = scorePicks(games, picks);
+  const season_ = scorePicks(games, picks, adjustments);
   const perWeek = seasonWeeks.map((w) => {
     const ids = new Set(games.filter((g) => g.week_id === w.id).map((g) => g.id));
     return {
@@ -23,6 +23,7 @@ export default async function StandingsPage() {
       scores: scorePicks(
         games.filter((g) => ids.has(g.id)),
         picks.filter((p) => ids.has(p.game_id)),
+        adjustments.filter((a) => a.week_id === w.id),
       ),
     };
   });

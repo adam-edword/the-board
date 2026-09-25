@@ -37,4 +37,7 @@ export type Game = {
 };
 
 export type Side = "home" | "away";
+// flat points for a week, for old whiteboard weeks where only totals are known
+export type Adjustment = { user_id: string; week_id: number; points: number };
+
 export type Pick = { user_id: string; game_id: number; side: Side; updated_at?: string };

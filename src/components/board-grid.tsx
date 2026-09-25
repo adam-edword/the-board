@@ -1,17 +1,18 @@
 import { cn } from "@/lib/utils";
 import { firstName, pointsFor } from "@/lib/format";
-import type { Game, Pick, Profile, Side } from "@/lib/types";
+import type { Adjustment, Game, Pick, Profile, Side } from "@/lib/types";
 import type { Marker } from "@/lib/markers";
 import { BoardTile } from "./board-tile";
 import { CoinIcon } from "./coin-icon";
 
 // the whiteboard: one tile per game, names written under the side they took
-export function BoardGrid({ games, members, picks, picked, meId }: {
+export function BoardGrid({ games, members, picks, picked, meId, adjustments = [] }: {
   games: Game[];
   members: Profile[];
   picks: Pick[];
   picked: { user_id: string; game_id: number }[];
   meId: string;
+  adjustments?: Adjustment[];
 }) {
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
   const markers = new Map<string, Marker>(
@@ -25,6 +26,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
     const g = byGame.get(p.game_id);
     if (g?.status === "post" && g.winner === p.side) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + pointsFor(g));
   }
+  for (const a of adjustments) totals.set(a.user_id, (totals.get(a.user_id) ?? 0) + a.points);
   const ranked = members
     .map((m) => ({ id: m.id, name: names.get(m.id)!, pts: totals.get(m.id) ?? 0, bot: m.is_bot }))
     .sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { Game, Pick, Profile, Week } from "@/lib/types";
+import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
 import { pointsFor } from "@/lib/format";
 
 export const getMe = cache(async () => {
@@ -37,10 +37,11 @@ export async function getMembers() {
 
 export async function getWeekData(weekId: number) {
   const supabase = await createClient();
-  const [games, picks, status] = await Promise.all([
+  const [games, picks, status, adjustments] = await Promise.all([
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
     supabase.from("picks").select("user_id, game_id, side, updated_at, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
+    supabase.from("score_adjustments").select("user_id, week_id, points").eq("week_id", weekId),
   ]);
   return {
     games: (games.data ?? []) as Game[],
@@ -48,6 +49,7 @@ export async function getWeekData(weekId: number) {
     picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at }) => ({ user_id, game_id, side, updated_at })) as Pick[],
     // who has picked what game, sides hidden
     picked: (status.data ?? []) as { user_id: string; game_id: number }[],
+    adjustments: (adjustments.data ?? []) as Adjustment[],
   };
 }
 
@@ -56,8 +58,11 @@ export async function getSeasonData(season: number) {
   const supabase = await createClient();
   const weeks = (await getWeeks()).filter((w) => w.season === season).reverse();
   const ids = weeks.map((w) => w.id);
-  if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[] };
-  const { data: games } = await supabase.from("games").select("*").in("week_id", ids);
+  if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[], adjustments: [] as Adjustment[] };
+  const [{ data: games }, { data: adjustments }] = await Promise.all([
+    supabase.from("games").select("*").in("week_id", ids),
+    supabase.from("score_adjustments").select("user_id, week_id, points").in("week_id", ids),
+  ]);
 
   // supabase caps a single response at 1000 rows, so page through a full season
   const picks: Pick[] = [];
@@ -75,10 +80,10 @@ export async function getSeasonData(season: number) {
     if (rows.length < PAGE) break;
   }
 
-  return { weeks, games: (games ?? []) as Game[], picks };
+  return { weeks, games: (games ?? []) as Game[], picks, adjustments: (adjustments ?? []) as Adjustment[] };
 }
 
-export function scorePicks(games: Game[], picks: Pick[]) {
+export function scorePicks(games: Game[], picks: Pick[], adjustments: Adjustment[] = []) {
   const byId = new Map(games.map((g) => [g.id, g]));
   const totals = new Map<string, { points: number; correct: number; decided: number }>();
   for (const p of picks) {
@@ -91,6 +96,12 @@ export function scorePicks(games: Game[], picks: Pick[]) {
       t.points += pointsFor(g);
     }
     totals.set(p.user_id, t);
+  }
+  // adjustments only add points; there are no individual picks behind them
+  for (const a of adjustments) {
+    const t = totals.get(a.user_id) ?? { points: 0, correct: 0, decided: 0 };
+    t.points += a.points;
+    totals.set(a.user_id, t);
   }
   return totals;
 }
