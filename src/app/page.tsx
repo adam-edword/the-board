@@ -50,7 +50,7 @@ export default async function BoardPage(props: PageProps<"/">) {
   const myOpenLeft = openGames.filter((g) => !mine.has(g.id)).length;
   const pickedCount = new Map<string, number>();
   for (const p of picked) pickedCount.set(p.user_id, (pickedCount.get(p.user_id) ?? 0) + 1);
-  const slackers = members.filter((m) => (pickedCount.get(m.id) ?? 0) < games.length && m.id !== me.id);
+  const slackers = members.filter((m) => (pickedCount.get(m.id) ?? 0) < games.length && m.id !== me.id && !m.is_bot);
   const anyActive = games.some((g) => g.status === "in" || (g.status === "pre" && isLocked(g)));
 
   return (

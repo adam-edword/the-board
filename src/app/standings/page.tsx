@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { TrophyIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CoinIcon } from "@/components/coin-icon";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMe, getMembers, getSeasonData, getWeeks, scorePicks } from "@/lib/data";
@@ -62,6 +63,7 @@ export default async function StandingsPage() {
               <TableRow key={r.m.id} className={cn(r.m.id === me.id && "bg-muted/40")}>
                 <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                 <TableCell className="font-medium">
+                  {r.m.is_bot && <CoinIcon className="mr-1.5" />}
                   {r.m.name.toLowerCase()}
                   {i === 0 && r.points > 0 && <TrophyIcon className="ml-1.5 inline size-3.5 text-live" />}
                 </TableCell>

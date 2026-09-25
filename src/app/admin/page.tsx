@@ -239,7 +239,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         </CardHeader>
         <CardContent>
           <ul className="divide-y rounded-lg border">
-            {((people ?? []) as Profile[]).map((p) => (
+            {((people ?? []) as Profile[]).filter((p) => !p.is_bot).map((p) => (
               <li key={p.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
                 <span className="min-w-40 flex-1">
                   {p.name}

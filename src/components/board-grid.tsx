@@ -3,6 +3,7 @@ import { firstName, pointsFor } from "@/lib/format";
 import type { Game, Pick, Profile, Side } from "@/lib/types";
 import type { Marker } from "@/lib/markers";
 import { BoardTile } from "./board-tile";
+import { CoinIcon } from "./coin-icon";
 
 // the whiteboard: one tile per game, names written under the side they took
 export function BoardGrid({ games, members, picks, picked, meId }: {
@@ -14,7 +15,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
 }) {
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
   const markers = new Map<string, Marker>(
-    members.map((m) => [m.id, { name: names.get(m.id)!, color: m.marker_color, font: m.marker_font }]),
+    members.map((m) => [m.id, { name: names.get(m.id)!, color: m.marker_color, font: m.marker_font, bot: m.is_bot }]),
   );
 
   // weekly totals
@@ -25,7 +26,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
     if (g?.status === "post" && g.winner === p.side) totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + pointsFor(g));
   }
   const ranked = members
-    .map((m) => ({ id: m.id, name: names.get(m.id)!, pts: totals.get(m.id) ?? 0 }))
+    .map((m) => ({ id: m.id, name: names.get(m.id)!, pts: totals.get(m.id) ?? 0, bot: m.is_bot }))
     .sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));
   const best = ranked[0]?.pts ?? 0;
 
@@ -41,6 +42,7 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
               r.id === meId && !(r.pts === best && best > 0) && "border-foreground/30",
             )}
           >
+            {r.bot && <CoinIcon />}
             {r.name}
             <span className="font-mono font-semibold tabular-nums">{r.pts}</span>
           </span>

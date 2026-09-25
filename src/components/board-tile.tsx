@@ -11,6 +11,7 @@ import { markerStyle, type Marker } from "@/lib/markers";
 import { jitter, rng, wobblyLine } from "@/lib/scribble";
 import { Card } from "@/components/ui/card";
 import { TeamLogo } from "./team-logo";
+import { CoinIcon } from "./coin-icon";
 
 type Props = {
   game: Game;
@@ -120,6 +121,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
                     style={{ ...markerStyle(m), ...handwriting(g.id, m.name) }}
                     className={cn("truncate origin-left", lost && "line-through decoration-2 opacity-45")}
                   >
+                    {m.bot && <CoinIcon className="mr-1" />}
                     {m.name}
                   </li>
                 ))}
