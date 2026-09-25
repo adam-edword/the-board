@@ -2,20 +2,21 @@
 // keys must match the check constraints in supabase/migrations (colors: 0021, fonts: 0007).
 // each color belongs to one person at a time (see profiles_color_lock in 0021).
 
+// in rainbow order (the pickers show them in this order), neutrals last
 export const MARKER_COLORS = {
-  white: "#f4f4f5",
   red: "#f87171",
   orange: "#fb923c",
   yellow: "#facc15",
-  green: "#4ade80",
-  blue: "#60a5fa",
-  purple: "#c084fc",
-  pink: "#f472b6",
-  teal: "#2dd4bf",
   lime: "#bef264",
+  green: "#4ade80",
+  teal: "#2dd4bf",
   sky: "#7dd3fc",
+  blue: "#60a5fa",
   indigo: "#818cf8",
+  purple: "#c084fc",
   fuchsia: "#e879f9",
+  pink: "#f472b6",
+  white: "#f4f4f5",
   tan: "#d6a574",
 } as const;
 
