@@ -127,16 +127,36 @@ export async function createNextWeek() {
   await requireAdmin();
   const supabase = await createClient();
   const { data: weeks } = await supabase.from("weeks").select("label, season");
-  const nums = (weeks ?? []).map((w) => Number(/(\d+)\s*$/.exec(w.label)?.[1])).filter(Number.isFinite);
-  const next = nums.length ? Math.max(...nums) + 1 : 1;
   // stay in the current season (it runs past new year's for the playoffs)
   const season = weeks?.length ? Math.max(...weeks.map((w) => w.season)) : new Date().getFullYear();
+  const nums = (weeks ?? [])
+    .filter((w) => w.season === season)
+    .map((w) => Number(/(\d+)\s*$/.exec(w.label)?.[1]))
+    .filter(Number.isFinite);
+  const next = nums.length ? Math.max(...nums) + 1 : 0;
   const { data, error } = await supabase
     .from("weeks")
     .insert({ label: `week ${next}`, season })
     .select("id")
     .single();
   if (error) throw error;
+  redirect(`/admin?week=${data.id}`);
+}
+
+// wraps up the current season (it stays viewable in standings) and starts the
+// next one with a fresh week 0
+export async function startNewSeason() {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data: weeks } = await supabase.from("weeks").select("season");
+  const current = weeks?.length ? Math.max(...weeks.map((w) => w.season)) : new Date().getFullYear() - 1;
+  const { data, error } = await supabase
+    .from("weeks")
+    .insert({ label: "week 0", season: current + 1 })
+    .select("id")
+    .single();
+  if (error) throw error;
+  revalidatePath("/", "layout");
   redirect(`/admin?week=${data.id}`);
 }
 

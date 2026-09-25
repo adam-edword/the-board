@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { RefreshCwIcon, TrashIcon } from "lucide-react";
+import { CalendarPlusIcon, RefreshCwIcon, TrashIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getMe, getMembers, getWeekData, getWeeks } from "@/lib/data";
 import type { Profile } from "@/lib/types";
-import { deleteWeek, refreshScores, renameWeek } from "@/app/actions";
+import { deleteWeek, refreshScores, renameWeek, startNewSeason } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,13 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   ]);
   const waiting = ((people ?? []) as Profile[]).filter((p) => !p.approved).length;
 
+  // newest season first, each linking to its latest week
+  const seasons = [...new Set(weeks.map((w) => w.season))].map((y) => ({
+    season: y,
+    firstWeekId: weeks.find((w) => w.season === y)!.id,
+  }));
+  const currentSeason = seasons[0]?.season ?? new Date().getFullYear();
+
   const noWeeks = <p className="text-sm text-muted-foreground">no weeks yet. hit &quot;new week&quot; to start one.</p>;
 
   return (
@@ -38,7 +45,9 @@ export default async function AdminPage(props: PageProps<"/admin">) {
       <h1 className="font-heading text-2xl font-semibold tracking-tight">admin</h1>
 
       <AdminShell
-        weeks={weeks}
+        weeks={week ? weeks.filter((w) => w.season === week.season) : weeks}
+        seasons={seasons}
+        season={week?.season ?? null}
         weekId={week?.id ?? null}
         initialTab={tab}
         waiting={waiting}
@@ -99,6 +108,27 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             </Card>
           ) : (
             noWeeks
+          ),
+          season: (
+            <Card className="max-w-xl">
+              <CardHeader>
+                <CardTitle>season</CardTitle>
+                <CardDescription>
+                  when {currentSeason} is over, start {currentSeason + 1}. {currentSeason} stays viewable in standings
+                  with its champion, and the new season starts fresh at week 0.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form action={startNewSeason}>
+                  <ConfirmButton
+                    variant="outline"
+                    message={`wrap up ${currentSeason} and start the ${currentSeason + 1} season? standings reset for the new season (${currentSeason} is kept as an archive).`}
+                  >
+                    <CalendarPlusIcon /> start {currentSeason + 1} season
+                  </ConfirmButton>
+                </form>
+              </CardContent>
+            </Card>
           ),
         }}
       />

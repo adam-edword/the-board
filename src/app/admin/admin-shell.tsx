@@ -14,13 +14,16 @@ export const ADMIN_TABS = [
   { key: "fix", label: "fix picks" },
   { key: "people", label: "people" },
   { key: "week", label: "week settings" },
+  { key: "season", label: "season" },
 ] as const;
 export type AdminTab = (typeof ADMIN_TABS)[number]["key"];
 
 // week chips + section tabs. tabs switch instantly (everything is already
 // rendered); the url is kept in sync so a refresh lands on the same tab.
-export function AdminShell({ weeks, weekId, initialTab, waiting, panels }: {
+export function AdminShell({ weeks, seasons, season, weekId, initialTab, waiting, panels }: {
   weeks: Week[];
+  seasons: { season: number; firstWeekId: number }[];
+  season: number | null;
   weekId: number | null;
   initialTab: AdminTab;
   waiting: number;
@@ -38,6 +41,24 @@ export function AdminShell({ weeks, weekId, initialTab, waiting, panels }: {
 
   return (
     <>
+      {/* season switcher (only once there's more than one) */}
+      {seasons.length > 1 && (
+        <div className="flex gap-1 text-sm">
+          {seasons.map((s) => (
+            <Link
+              key={s.season}
+              href={`/admin?week=${s.firstWeekId}&tab=${tab}`}
+              className={cn(
+                "rounded-md px-2 py-0.5",
+                s.season === season ? "bg-muted font-medium" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {s.season}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* week chips, oldest to newest, plus a one-tap new week */}
       <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {[...weeks].reverse().map((w) => (
@@ -45,11 +66,14 @@ export function AdminShell({ weeks, weekId, initialTab, waiting, panels }: {
             <Link href={`/admin?week=${w.id}&tab=${tab}`}>{w.label}</Link>
           </Button>
         ))}
-        <form action={createNextWeek} onSubmit={() => setCreating(true)} className="shrink-0">
-          <Button type="submit" size="sm" variant="ghost" disabled={creating}>
-            <PlusIcon /> {creating ? "adding…" : "new week"}
-          </Button>
-        </form>
+        {/* new weeks always go in the current season */}
+        {(seasons.length <= 1 || season === seasons[0]?.season) && (
+          <form action={createNextWeek} onSubmit={() => setCreating(true)} className="shrink-0">
+            <Button type="submit" size="sm" variant="ghost" disabled={creating}>
+              <PlusIcon /> {creating ? "adding…" : "new week"}
+            </Button>
+          </form>
+        )}
       </div>
 
       <nav className="flex gap-1 overflow-x-auto border-b">

@@ -4,20 +4,29 @@ import { TrophyIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CoinIcon } from "@/components/coin-icon";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getMe, getMembers, getSeasonData, getWeeks } from "@/lib/data";
+import { getChampions, getMe, getMembers, getSeasonData, getSeasons } from "@/lib/data";
+import { markerStyle } from "@/lib/markers";
+import { firstName } from "@/lib/format";
 import { seasonStats } from "@/lib/stats";
 
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}` : "–");
 
-export default async function StandingsPage() {
+export default async function StandingsPage(props: PageProps<"/standings">) {
   const me = await getMe();
   if (!me) redirect("/login");
   if (!me.onboarded) redirect("/welcome");
   if (!me.approved) redirect("/");
 
-  const weeks = await getWeeks();
-  const season = weeks[0]?.season ?? new Date().getFullYear();
+  const seasons = await getSeasons();
+  const current = seasons[0] ?? new Date().getFullYear();
+  const { season: asked } = await props.searchParams;
+  const season = seasons.find((s) => String(s) === asked) ?? current;
+  const past = season !== current;
+  // champ banner: this season's winner if it's over, or last season's otherwise
+  const bannerSeason = past ? season : seasons[1];
+  const banner = bannerSeason ? await getChampions(bannerSeason) : null;
   const [{ weeks: seasonWeeks, games, picks, adjustments }, members] = await Promise.all([
     getSeasonData(season),
     getMembers(),
@@ -31,7 +40,40 @@ export default async function StandingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">{season} standings</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">{season} standings</h1>
+        {seasons.length > 1 && (
+          <div className="flex gap-1.5">
+            {seasons.map((y) => (
+              <Button key={y} asChild size="sm" variant={y === season ? "default" : "outline"}>
+                <Link href={y === current ? "/standings" : `/standings?season=${y}`}>{y}</Link>
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {banner && (
+        <Card className={cn("flex-row items-center gap-3 px-4", past && "bg-live/10 ring-live/40")}>
+          <TrophyIcon className={cn("shrink-0 text-live", past ? "size-7" : "size-5")} />
+          <div>
+            <div className={cn(past ? "text-base font-semibold" : "text-sm text-muted-foreground")}>
+              {past ? `${season} champion${banner.champs.length > 1 ? "s" : ""}` : `${bannerSeason} champ${banner.champs.length > 1 ? "s" : ""}`}
+            </div>
+            <div className="text-sm">
+              {banner.champs.map((m, i) => (
+                <span key={m.id}>
+                  {i > 0 && " & "}
+                  <span style={{ ...markerStyle({ color: m.marker_color, font: m.marker_font }), fontSize: past ? 26 : 20 }}>
+                    {firstName(m.name).toLowerCase()}
+                  </span>
+                </span>
+              ))}{" "}
+              <span className="text-muted-foreground">with {banner.points} pts</span>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="py-0">
         <Table>
@@ -61,7 +103,10 @@ export default async function StandingsPage() {
               <TableRow key={m.id} className={cn(m.id === me.id && "bg-muted/40")}>
                 <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                 <TableCell className="font-medium">
-                  <Link href={`/players/${m.id}`} className="underline-offset-4 hover:underline">
+                  <Link
+                    href={`/players/${m.id}${past ? `?season=${season}` : ""}`}
+                    className="underline-offset-4 hover:underline"
+                  >
                     {m.is_bot && <CoinIcon className="mr-1.5" />}
                     {m.name.toLowerCase()}
                   </Link>

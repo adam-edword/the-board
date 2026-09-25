@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
+import { seasonStats } from "@/lib/stats";
 
 export const getMe = cache(async () => {
   const supabase = await createClient();
@@ -20,8 +21,24 @@ export async function getWeeks() {
   const start = (w: { games: { kickoff: string }[] }) =>
     w.games.length ? Math.min(...w.games.map((g) => new Date(g.kickoff).getTime())) : Infinity;
   return (data ?? [])
-    .sort((a, b) => start(b) - start(a) || b.id - a.id)
+    .sort((a, b) => b.season - a.season || start(b) - start(a) || b.id - a.id)
     .map((w) => ({ id: w.id, season: w.season, label: w.label, created_at: w.created_at })) as Week[];
+}
+
+// newest first. the current season is the first one.
+export async function getSeasons() {
+  const weeks = await getWeeks();
+  return [...new Set(weeks.map((w) => w.season))];
+}
+
+// whoever finished a season on top (ties share it). only for seasons that are
+// over, i.e. a newer season has started.
+export async function getChampions(season: number) {
+  const [{ weeks, games, picks, adjustments }, members] = await Promise.all([getSeasonData(season), getMembers()]);
+  const stats = seasonStats(weeks, games, picks, adjustments, members);
+  const humans = members.filter((m) => !m.is_bot);
+  const best = Math.max(0, ...humans.map((m) => stats.get(m.id)?.points ?? 0));
+  return best > 0 ? { points: best, champs: humans.filter((m) => stats.get(m.id)?.points === best) } : null;
 }
 
 export async function getMembers() {

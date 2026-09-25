@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
-import { getMe, getMembers, getSeasonData, getWeeks } from "@/lib/data";
+import { getMe, getMembers, getSeasonData, getSeasons } from "@/lib/data";
 import { firstName } from "@/lib/format";
 import { MARKER_COLORS, markerStyle } from "@/lib/markers";
 import { seasonStats } from "@/lib/stats";
@@ -18,8 +18,9 @@ export default async function PlayerPage(props: PageProps<"/players/[id]">) {
   if (!me.approved) redirect("/");
 
   const { id } = await props.params;
-  const weeks = await getWeeks();
-  const season = weeks[0]?.season ?? new Date().getFullYear();
+  const seasons = await getSeasons();
+  const { season: asked } = await props.searchParams;
+  const season = seasons.find((s) => String(s) === asked) ?? seasons[0] ?? new Date().getFullYear();
   const [{ weeks: seasonWeeks, games, picks, adjustments }, members] = await Promise.all([
     getSeasonData(season),
     getMembers(),
@@ -52,7 +53,7 @@ export default async function PlayerPage(props: PageProps<"/players/[id]">) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link href="/standings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href={season === seasons[0] ? "/standings" : `/standings?season=${season}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeftIcon className="size-4" /> standings
       </Link>
 

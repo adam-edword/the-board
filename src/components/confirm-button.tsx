@@ -2,11 +2,15 @@
 
 import { Button } from "@/components/ui/button";
 
-export function ConfirmButton({ message, children }: { message: string; children: React.ReactNode }) {
+export function ConfirmButton({ message, children, variant = "destructive" }: {
+  message: string;
+  children: React.ReactNode;
+  variant?: "destructive" | "outline";
+}) {
   return (
     <Button
       type="submit"
-      variant="destructive"
+      variant={variant}
       size="sm"
       onClick={(e) => {
         if (!confirm(message)) e.preventDefault();
