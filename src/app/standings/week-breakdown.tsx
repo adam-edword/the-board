@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { TrophyIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { markerStyle, type MarkerColor, type MarkerFont } from "@/lib/markers";
 import { CoinIcon } from "@/components/coin-icon";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 export type BreakdownRow = {
   id: string;
   name: string;
+  color: MarkerColor;
+  font: MarkerFont;
   bot: boolean;
   played: boolean;
   won: boolean;
@@ -75,7 +78,7 @@ export function WeekBreakdown({ weeks, initialWeekId, linkSuffix }: {
                   <TableCell className="font-medium">
                     <Link href={`/players/${r.id}${linkSuffix}`} className="underline-offset-4 hover:underline">
                       {r.bot && <CoinIcon className="mr-1.5" />}
-                      {r.name}
+                      <span style={markerStyle({ color: r.color, font: r.font })}>{r.name}</span>
                     </Link>
                     {r.won && <TrophyIcon className="ml-1.5 inline size-3.5 text-live" />}
                   </TableCell>

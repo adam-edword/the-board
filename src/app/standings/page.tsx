@@ -42,7 +42,18 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
     done: stats.get(members[0]?.id ?? "")?.weeks.find((l) => l.week.id === w.id)?.done ?? false,
     rows: members.map((m) => {
       const l = stats.get(m.id)!.weeks.find((x) => x.week.id === w.id)!;
-      return { id: m.id, name: m.name.toLowerCase(), bot: m.is_bot, played: l.played, won: l.won, cfb: l.cfb, nfl: l.nfl, total: l.points };
+      return {
+        id: m.id,
+        name: m.name.toLowerCase(),
+        color: m.marker_color,
+        font: m.marker_font,
+        bot: m.is_bot,
+        played: l.played,
+        won: l.won,
+        cfb: l.cfb,
+        nfl: l.nfl,
+        total: l.points,
+      };
     }),
   }));
   const withFinal = new Set(games.filter((g) => g.status === "post").map((g) => g.week_id));
@@ -122,7 +133,10 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
                     className="underline-offset-4 hover:underline"
                   >
                     {m.is_bot && <CoinIcon className="mr-1.5" />}
-                    {m.name.toLowerCase()}
+                    {/* written in their own marker, like on the board */}
+                    <span style={markerStyle({ color: m.marker_color, font: m.marker_font })}>
+                      {m.name.toLowerCase()}
+                    </span>
                   </Link>
                   {i === 0 && s.points > 0 && <TrophyIcon className="ml-1.5 inline size-3.5 text-live" />}
                 </TableCell>
