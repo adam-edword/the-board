@@ -122,13 +122,20 @@ export async function signOut() {
 
 // ---------------------------------------------------------------- admin
 
-export async function createWeek(formData: FormData) {
+// one tap "+ new week": names it one past the highest "week N" so far
+export async function createNextWeek() {
   await requireAdmin();
-  const label = String(formData.get("label") ?? "").trim();
-  const season = Number(formData.get("season"));
-  if (!label || !season) return;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("weeks").insert({ label, season }).select("id").single();
+  const { data: weeks } = await supabase.from("weeks").select("label, season");
+  const nums = (weeks ?? []).map((w) => Number(/(\d+)\s*$/.exec(w.label)?.[1])).filter(Number.isFinite);
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  // stay in the current season (it runs past new year's for the playoffs)
+  const season = weeks?.length ? Math.max(...weeks.map((w) => w.season)) : new Date().getFullYear();
+  const { data, error } = await supabase
+    .from("weeks")
+    .insert({ label: `week ${next}`, season })
+    .select("id")
+    .single();
   if (error) throw error;
   redirect(`/admin?week=${data.id}`);
 }
