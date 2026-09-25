@@ -13,10 +13,16 @@ export const getMe = cache(async () => {
   return (data as Profile) ?? null;
 });
 
+// weeks sort by their first kickoff (newest first), so a back-filled old week
+// doesn't jump ahead of the current one. brand new weeks with no games go on top.
 export async function getWeeks() {
   const supabase = await createClient();
-  const { data } = await supabase.from("weeks").select("*").order("id", { ascending: false });
-  return (data ?? []) as Week[];
+  const { data } = await supabase.from("weeks").select("*, games(kickoff)");
+  const start = (w: { games: { kickoff: string }[] }) =>
+    w.games.length ? Math.min(...w.games.map((g) => new Date(g.kickoff).getTime())) : Infinity;
+  return (data ?? [])
+    .sort((a, b) => start(b) - start(a) || b.id - a.id)
+    .map((w) => ({ id: w.id, season: w.season, label: w.label, created_at: w.created_at })) as Week[];
 }
 
 export async function getMembers() {
@@ -48,8 +54,8 @@ export async function getWeekData(weekId: number) {
 /** every visible pick + game for a season, for standings */
 export async function getSeasonData(season: number) {
   const supabase = await createClient();
-  const { data: weeks } = await supabase.from("weeks").select("*").eq("season", season).order("id");
-  const ids = (weeks ?? []).map((w) => w.id);
+  const weeks = (await getWeeks()).filter((w) => w.season === season).reverse();
+  const ids = weeks.map((w) => w.id);
   if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[] };
   const { data: games } = await supabase.from("games").select("*").in("week_id", ids);
 
@@ -69,7 +75,7 @@ export async function getSeasonData(season: number) {
     if (rows.length < PAGE) break;
   }
 
-  return { weeks: (weeks ?? []) as Week[], games: (games ?? []) as Game[], picks };
+  return { weeks, games: (games ?? []) as Game[], picks };
 }
 
 export function scorePicks(games: Game[], picks: Pick[]) {
