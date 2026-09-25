@@ -3,6 +3,8 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
 import { seasonStats } from "@/lib/stats";
+import { firstName } from "@/lib/format";
+import type { Marker } from "@/lib/markers";
 
 // everything on a profile except email, which only the admin can read
 export const PROFILE_COLUMNS =
@@ -44,6 +46,14 @@ export async function getTakenColors() {
     taken[row.color] = row.name;
   }
   return taken;
+}
+
+// everyone else's marker, for the preview board in the marker pickers. empty
+// until you're approved, since you can't see other people before that.
+export async function getOtherMarkers(meId: string): Promise<Marker[]> {
+  return (await getMembers())
+    .filter((m) => m.id !== meId && m.onboarded)
+    .map((m) => ({ id: m.id, name: firstName(m.name).toLowerCase(), color: m.marker_color, font: m.marker_font, bot: m.is_bot }));
 }
 
 // newest first. the current season is the first one.

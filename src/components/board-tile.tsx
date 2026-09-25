@@ -23,10 +23,12 @@ type Props = {
   pickedCount: number;
   total: number;
   roster: string[];
+  // just for show (the marker picker): can't be tapped, no footer
+  preview?: boolean;
 };
 
 // one whiteboard square. tap a side to write your name under it, tap again to erase.
-export function BoardTile({ game: g, others, mySide, me, pickedCount, total, roster }: Props) {
+export function BoardTile({ game: g, others, mySide, me, pickedCount, total, roster, preview }: Props) {
   const [side, setOptimisticSide] = useOptimistic(mySide);
   const [pending, startTransition] = useTransition();
   const tz = useTimeZone();
@@ -89,13 +91,13 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
               key={s}
               type="button"
               onClick={() => choose(s)}
-              disabled={locked || pending}
+              disabled={locked || pending || preview}
               aria-pressed={mine}
               aria-label={`pick ${s === "home" ? g.home_name : g.away_name}`}
               className={cn(
                 "relative flex flex-col p-3 text-left outline-none transition-colors",
                 "focus-visible:bg-muted/60 disabled:cursor-default",
-                !locked && "hover:bg-muted/40 active:bg-muted/60",
+                !locked && !preview && "hover:bg-muted/40 active:bg-muted/60",
                 won && "bg-win/10",
               )}
             >
@@ -174,7 +176,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
           );
         })}
       </div>
-      <div className="flex items-center justify-between gap-1 border-t px-2 py-1.5 text-[11px] text-muted-foreground">
+      {!preview && <div className="flex items-center justify-between gap-1 border-t px-2 py-1.5 text-[11px] text-muted-foreground">
         <span className={cn("flex min-w-0 items-center gap-1 truncate", live && "font-medium text-live")}>
           {live && <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-live" />}
           {g.status === "pre" ? kickoffLabel(g.kickoff, tz) : (g.status_detail ?? "").toLowerCase()}
@@ -188,7 +190,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
           )}
           {locked ? (g.league === "nfl" ? "nfl" : "cfb") : `${count}/${total} in`}
         </span>
-      </div>
+      </div>}
     </Card>
   );
 }

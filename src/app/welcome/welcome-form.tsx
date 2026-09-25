@@ -4,12 +4,19 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { completeOnboarding } from "@/app/actions";
 import { MarkerFields, freeColor, type TakenColors } from "@/app/me/marker-picker";
-import type { MarkerColor, MarkerFont } from "@/lib/markers";
+import type { Marker, MarkerColor, MarkerFont } from "@/lib/markers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function WelcomeForm(props: { name: string; color: MarkerColor; font: MarkerFont; taken: TakenColors }) {
+export function WelcomeForm(props: {
+  id: string;
+  name: string;
+  color: MarkerColor;
+  font: MarkerFont;
+  taken: TakenColors;
+  others: Marker[];
+}) {
   const [name, setName] = useState(props.name);
   // start on a color nobody has (the default white may already be taken)
   const [color, setColor] = useState(() => freeColor(props.color, props.taken));
@@ -31,10 +38,12 @@ export function WelcomeForm(props: { name: string; color: MarkerColor; font: Mar
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoComplete="nickname" />
       </div>
       <MarkerFields
+        id={props.id}
         name={name.trim() || "you"}
         color={color}
         font={font}
         taken={props.taken}
+        others={props.others}
         onColor={setColor}
         onFont={setFont}
       />

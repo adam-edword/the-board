@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getMe, getTakenColors } from "@/lib/data";
+import { getMe, getOtherMarkers, getTakenColors } from "@/lib/data";
 import { firstName } from "@/lib/format";
 import { updateName } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { MarkerPicker } from "./marker-picker";
 export default async function MePage() {
   const me = await getMe();
   if (!me) redirect("/login");
-  const taken = await getTakenColors();
+  const [taken, others] = await Promise.all([getTakenColors(), getOtherMarkers(me.id)]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -25,7 +25,9 @@ export default async function MePage() {
             name={firstName(me.name).toLowerCase()}
             color={me.marker_color}
             font={me.marker_font}
-            taken={taken}
+            id={me.id}
+          taken={taken}
+          others={others}
           />
         </CardContent>
       </Card>
