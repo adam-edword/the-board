@@ -9,7 +9,8 @@ import { WeekPicker } from "@/components/week-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { firstName, isLocked } from "@/lib/format";
-import { getMe, getMembers, getWeekData, getWeeks } from "@/lib/data";
+import { getMe, getMembers, getSeasonData, getWeekData, getWeeks } from "@/lib/data";
+import { seasonStats } from "@/lib/stats";
 import { syncScores } from "@/lib/sync";
 
 export default async function BoardPage(props: PageProps<"/">) {
@@ -50,7 +51,14 @@ export default async function BoardPage(props: PageProps<"/">) {
   }
 
   const week = weeks.find((w) => String(w.id) === sp.week) ?? weeks[0];
-  const [{ games, picks, picked, adjustments }, members] = await Promise.all([getWeekData(week.id), getMembers()]);
+  const [{ games, picks, picked, adjustments }, members, season] = await Promise.all([
+    getWeekData(week.id),
+    getMembers(),
+    getSeasonData(week.season),
+  ]);
+  // season totals for the standings strip above the board
+  const stats = seasonStats(season.weeks, season.games, season.picks, season.adjustments, members);
+  const seasonTotals = Object.fromEntries(members.map((m) => [m.id, { points: stats.get(m.id)?.points ?? 0, edited: !!stats.get(m.id)?.edited }]));
 
   const mine = new Map(picks.filter((p) => p.user_id === me.id).map((p) => [p.game_id, p.side]));
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
@@ -97,7 +105,7 @@ export default async function BoardPage(props: PageProps<"/">) {
       ) : (
         <>
           <WeekRecap label={week.label} games={games} picks={picks} adjustments={adjustments} members={members} />
-          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} />
+          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} seasonTotals={seasonTotals} />
           <p className="text-center text-xs text-muted-foreground">
             tap a side to put your name on it, tap again to erase. picks lock at kickoff.
           </p>
