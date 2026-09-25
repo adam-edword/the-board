@@ -1,9 +1,10 @@
-// kickoff times are shown in central time
+// the server renders times in central (where the group mostly is); each
+// browser then switches kickoff times to its own time zone (see useTimeZone)
 export const TIME_ZONE = "America/Chicago";
 
-export function kickoffLabel(iso: string) {
+export function kickoffLabel(iso: string, timeZone: string = TIME_ZONE) {
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: TIME_ZONE,
+    timeZone,
     weekday: "short",
     hour: "numeric",
     minute: "2-digit",

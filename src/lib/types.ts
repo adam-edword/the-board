@@ -48,6 +48,9 @@ export type Adjustment = {
   correct: number | null;
   decided: number | null;
   edited: boolean;
+  // college / nfl split, when known (whiteboard back-fills)
+  cfb_points?: number | null;
+  nfl_points?: number | null;
 };
 
 // edited = an admin changed it (shown with an asterisk)

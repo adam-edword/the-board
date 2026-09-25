@@ -9,6 +9,8 @@ export type WeekLine = {
   done: boolean; // every game final
   played: boolean; // had picks or a back-filled score
   points: number;
+  cfb: number; // college points
+  nfl: number; // nfl points (points can exceed cfb + nfl when an admin bonus has no league)
   coinPoints: number | null;
   won: boolean; // top score that week (ties count)
 };
@@ -63,6 +65,12 @@ export function seasonStats(
 
   // points + record per person per week
   const weekPts = new Map<string, Map<number, number>>(); // user -> week -> pts
+  const split = new Map<string, { cfb: number; nfl: number }>(); // `${user}:${week}`
+  const addSplit = (user: string, week: number, cfb: number, nfl: number) => {
+    const k = `${user}:${week}`;
+    const cur = split.get(k) ?? { cfb: 0, nfl: 0 };
+    split.set(k, { cfb: cur.cfb + cfb, nfl: cur.nfl + nfl });
+  };
   const addPts = (user: string, week: number, pts: number) => {
     const m = weekPts.get(user) ?? new Map<number, number>();
     m.set(week, (m.get(week) ?? 0) + pts);
@@ -90,6 +98,8 @@ export function seasonStats(
       s.correct++;
       s.points += pointsFor(g);
       addPts(p.user_id, g.week_id, pointsFor(g));
+      if (g.league === "nfl") addSplit(p.user_id, g.week_id, 0, pointsFor(g));
+      else addSplit(p.user_id, g.week_id, pointsFor(g), 0);
     }
     if (g.featured) {
       s.featured.total++;
@@ -103,6 +113,7 @@ export function seasonStats(
     s.decided += a.decided ?? 0;
     if (a.edited) s.edited = true;
     addPts(a.user_id, a.week_id, a.points);
+    addSplit(a.user_id, a.week_id, a.cfb_points ?? 0, a.nfl_points ?? 0);
   }
 
   // contrarian vs crowd, humans only, needs at least two other people on the game
@@ -137,6 +148,8 @@ export function seasonStats(
         done,
         played: pts !== undefined,
         points: pts ?? 0,
+        cfb: split.get(`${m.id}:${w.id}`)?.cfb ?? 0,
+        nfl: split.get(`${m.id}:${w.id}`)?.nfl ?? 0,
         coinPoints: coinPts,
         won: done && pts !== undefined && best > 0 && pts === best && humans.has(m.id),
       };

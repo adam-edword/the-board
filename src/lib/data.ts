@@ -65,7 +65,7 @@ export async function getWeekData(weekId: number) {
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
     supabase.from("picks").select("user_id, game_id, side, updated_at, edited, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
-    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited").eq("week_id", weekId),
+    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited, cfb_points, nfl_points").eq("week_id", weekId),
   ]);
   return {
     games: (games.data ?? []) as Game[],
@@ -85,7 +85,7 @@ export async function getSeasonData(season: number) {
   if (!ids.length) return { weeks: [] as Week[], games: [] as Game[], picks: [] as Pick[], adjustments: [] as Adjustment[] };
   const [{ data: games }, { data: adjustments }] = await Promise.all([
     supabase.from("games").select("*").in("week_id", ids),
-    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited").in("week_id", ids),
+    supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited, cfb_points, nfl_points").in("week_id", ids),
   ]);
 
   // supabase caps a single response at 1000 rows, so page through a full season

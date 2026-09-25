@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { setPick } from "@/app/actions";
 import { cn } from "@/lib/utils";
 import { isLocked, kickoffLabel } from "@/lib/format";
+import { useTimeZone } from "@/lib/use-time-zone";
 import type { Game, Side } from "@/lib/types";
 import { markerStyle, type Marker } from "@/lib/markers";
 import { jitter, rng, wobblyLine } from "@/lib/scribble";
@@ -28,6 +29,7 @@ type Props = {
 export function BoardTile({ game: g, others, mySide, me, pickedCount, total, roster }: Props) {
   const [side, setOptimisticSide] = useOptimistic(mySide);
   const [pending, startTransition] = useTransition();
+  const tz = useTimeZone();
   const locked = isLocked(g);
   const final = g.status === "post";
   const live = g.status === "in";
@@ -170,7 +172,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
       <div className="flex items-center justify-between gap-1 border-t px-2 py-1.5 text-[11px] text-muted-foreground">
         <span className={cn("flex min-w-0 items-center gap-1 truncate", live && "font-medium text-live")}>
           {live && <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-live" />}
-          {g.status === "pre" ? kickoffLabel(g.kickoff) : (g.status_detail ?? "").toLowerCase()}
+          {g.status === "pre" ? kickoffLabel(g.kickoff, tz) : (g.status_detail ?? "").toLowerCase()}
           {g.network && (g.status === "pre" || live) && <span className="truncate"> on {g.network}</span>}
         </span>
         <span className="flex shrink-0 items-center gap-1">

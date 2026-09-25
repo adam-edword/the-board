@@ -10,6 +10,7 @@ import { getChampions, getMe, getMembers, getSeasonData, getSeasons } from "@/li
 import { markerStyle } from "@/lib/markers";
 import { firstName } from "@/lib/format";
 import { seasonStats } from "@/lib/stats";
+import { WeekBreakdown, type BreakdownWeek } from "./week-breakdown";
 
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}` : "–");
 
@@ -33,6 +34,19 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
   ]);
   const stats = seasonStats(seasonWeeks, games, picks, adjustments, members);
   const hasCoin = members.some((m) => m.is_bot);
+
+  // weekly breakdown: weeks in order, opening on the latest week with a final game
+  const breakdown: BreakdownWeek[] = seasonWeeks.map((w) => ({
+    id: w.id,
+    label: w.label,
+    done: stats.get(members[0]?.id ?? "")?.weeks.find((l) => l.week.id === w.id)?.done ?? false,
+    rows: members.map((m) => {
+      const l = stats.get(m.id)!.weeks.find((x) => x.week.id === w.id)!;
+      return { id: m.id, name: m.name.toLowerCase(), bot: m.is_bot, played: l.played, won: l.won, cfb: l.cfb, nfl: l.nfl, total: l.points };
+    }),
+  }));
+  const withFinal = new Set(games.filter((g) => g.status === "post").map((g) => g.week_id));
+  const initialWeekId = ([...breakdown].reverse().find((w) => withFinal.has(w.id)) ?? breakdown.at(-1))?.id ?? 0;
 
   const rows = members
     .map((m) => ({ m, s: stats.get(m.id)! }))
@@ -136,43 +150,8 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
         <p className="text-xs text-muted-foreground">* includes a pick or score the admin edited</p>
       )}
 
-      {seasonWeeks.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-heading text-lg font-semibold">by week</h2>
-          <Card className="py-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="sticky left-0 bg-card">name</TableHead>
-                  {seasonWeeks.map((w) => (
-                    <TableHead key={w.id} className="text-right">
-                      {w.label.replace(/^week\s*/i, "wk ")}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map(({ m, s }) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="sticky left-0 bg-card">{m.name.toLowerCase()}</TableCell>
-                    {s.weeks.map((l) => (
-                      <TableCell
-                        key={l.week.id}
-                        className={cn(
-                          "text-right font-mono tabular-nums",
-                          l.won && "font-bold text-win",
-                          !l.played && "text-muted-foreground/50",
-                        )}
-                      >
-                        {l.played ? l.points : "–"}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </section>
+      {breakdown.length > 0 && (
+        <WeekBreakdown weeks={breakdown} initialWeekId={initialWeekId} linkSuffix={past ? `?season=${season}` : ""} />
       )}
     </div>
   );

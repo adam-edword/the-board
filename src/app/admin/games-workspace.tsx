@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { addGame, removeGame, setFeatured } from "@/app/actions";
 import { cn } from "@/lib/utils";
 import { kickoffLabel } from "@/lib/format";
+import { useTimeZone } from "@/lib/use-time-zone";
 import type { EspnGame, League, Schedule } from "@/lib/espn";
 import type { Game } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ function draftGame(weekId: number, league: League, e: EspnGame): Game {
 
 export function GamesWorkspace({ weekId, label, games: serverGames }: { weekId: number; label: string; games: Game[] }) {
   const [games, change] = useOptimistic(serverGames, applyChange);
+  const tz = useTimeZone();
   const [, startTransition] = useTransition();
   const sorted = [...games].sort((a, b) => a.kickoff.localeCompare(b.kickoff) || a.id - b.id);
 
@@ -105,7 +107,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames }: { weekId: 
                         {g.home_abbr}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {g.league === "nfl" ? "nfl" : "college"} · {kickoffLabel(g.kickoff)}
+                        {g.league === "nfl" ? "nfl" : "college"} · {kickoffLabel(g.kickoff, tz)}
                       </div>
                     </div>
                     <Button
@@ -177,6 +179,7 @@ function EspnBrowser({ added, onAdd }: {
   added: Set<string>;
   onAdd: (league: League, g: EspnGame, schedule: Schedule) => void;
 }) {
+  const tz = useTimeZone();
   const [league, setLeague] = useState<League>("nfl");
   const [target, setTarget] = useState<{ week?: number; st?: number }>({});
   const [top25, setTop25] = useState(false);
@@ -321,7 +324,7 @@ function EspnBrowser({ added, onAdd }: {
                     </div>
                   </div>
                   <span className="hidden shrink-0 text-right text-xs text-muted-foreground sm:block">
-                    {kickoffLabel(g.kickoff)}
+                    {kickoffLabel(g.kickoff, tz)}
                     {g.network && <span className="block">{g.network}</span>}
                   </span>
                   {isAdded ? (
