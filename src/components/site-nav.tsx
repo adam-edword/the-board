@@ -42,7 +42,7 @@ export function SiteNav({ me }: { me: Profile }) {
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/me">
-              <UserIcon /> change name
+              <UserIcon /> your marker &amp; name
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => signOut()}>

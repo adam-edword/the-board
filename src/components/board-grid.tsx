@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { firstName, pointsFor } from "@/lib/format";
 import type { Game, Pick, Profile, Side } from "@/lib/types";
+import type { Marker } from "@/lib/markers";
 import { BoardTile } from "./board-tile";
 
 // the whiteboard: one tile per game, names written under the side they took
@@ -12,6 +13,9 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
   meId: string;
 }) {
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
+  const markers = new Map<string, Marker>(
+    members.map((m) => [m.id, { name: names.get(m.id)!, color: m.marker_color, font: m.marker_font }]),
+  );
 
   // weekly totals
   const totals = new Map<string, number>(members.map((m) => [m.id, 0]));
@@ -45,22 +49,22 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {games.map((g) => {
-          const others: Record<Side, string[]> = { home: [], away: [] };
+          const others: Record<Side, Marker[]> = { home: [], away: [] };
           let mySide: Side | null = null;
           for (const p of picks) {
             if (p.game_id !== g.id) continue;
             if (p.user_id === meId) mySide = p.side;
-            else others[p.side].push(names.get(p.user_id) ?? "?");
+            else others[p.side].push(markers.get(p.user_id) ?? { name: "?", color: "white", font: "kalam" });
           }
-          others.home.sort();
-          others.away.sort();
+          others.home.sort((a, b) => a.name.localeCompare(b.name));
+          others.away.sort((a, b) => a.name.localeCompare(b.name));
           return (
             <BoardTile
               key={g.id}
               game={g}
               others={others}
               mySide={mySide}
-              myName={names.get(meId) ?? "you"}
+              me={markers.get(meId) ?? { name: "you", color: "white", font: "kalam" }}
               pickedCount={picked.filter((p) => p.game_id === g.id).length}
               total={members.length}
             />

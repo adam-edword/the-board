@@ -7,21 +7,22 @@ import { setPick } from "@/app/actions";
 import { cn } from "@/lib/utils";
 import { isLocked, kickoffLabel } from "@/lib/format";
 import type { Game, Side } from "@/lib/types";
+import { markerStyle, type Marker } from "@/lib/markers";
 import { Card } from "@/components/ui/card";
 import { TeamLogo } from "./team-logo";
 
 type Props = {
   game: Game;
   // everyone else's names per side
-  others: Record<Side, string[]>;
+  others: Record<Side, Marker[]>;
   mySide: Side | null;
-  myName: string;
+  me: Marker;
   pickedCount: number;
   total: number;
 };
 
 // one whiteboard square. tap a side to write your name under it, tap again to erase.
-export function BoardTile({ game: g, others, mySide, myName, pickedCount, total }: Props) {
+export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: Props) {
   const [side, setOptimisticSide] = useOptimistic(mySide);
   const [pending, startTransition] = useTransition();
   const locked = isLocked(g);
@@ -87,15 +88,14 @@ export function BoardTile({ game: g, others, mySide, myName, pickedCount, total 
                   </div>
                 )}
               </div>
-              <ul className="mt-1.5 w-full space-y-0.5 font-hand text-[15px] leading-tight">
-                {mine && (
-                  <li className={cn("truncate font-bold", won && "text-win", lost && "text-loss/80 line-through")}>
-                    {myName}
-                  </li>
-                )}
-                {others[s].map((n, i) => (
-                  <li key={i} className={cn("truncate", won && "text-win", lost && "text-loss/80 line-through")}>
-                    {n}
+              <ul className="mt-1.5 w-full space-y-0.5 leading-tight">
+                {(mine ? [me, ...others[s]] : others[s]).map((m, i) => (
+                  <li
+                    key={i}
+                    style={markerStyle(m)}
+                    className={cn("truncate", lost && "line-through decoration-2 opacity-45")}
+                  >
+                    {m.name}
                   </li>
                 ))}
               </ul>

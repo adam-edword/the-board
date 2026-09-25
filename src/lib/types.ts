@@ -1,3 +1,5 @@
+import type { MarkerColor, MarkerFont } from "@/lib/markers";
+
 export type Profile = {
   id: string;
   email: string | null;
@@ -5,6 +7,8 @@ export type Profile = {
   avatar_url: string | null;
   is_admin: boolean;
   approved: boolean;
+  marker_color: MarkerColor;
+  marker_font: MarkerFont;
 };
 
 export type Week = { id: number; season: number; label: string; created_at: string };

@@ -7,6 +7,7 @@ import { fetchSchedule, type League } from "@/lib/espn";
 import { syncScores } from "@/lib/sync";
 import { getMe } from "@/lib/data";
 import type { Side } from "@/lib/types";
+import { isMarkerColor, isMarkerFont } from "@/lib/markers";
 
 async function requireAdmin() {
   const me = await getMe();
@@ -42,6 +43,17 @@ export async function updateName(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("profiles").update({ name }).eq("id", me.id);
   revalidatePath("/", "layout");
+}
+
+export async function updateMarker(color: string, font: string) {
+  if (!isMarkerColor(color) || !isMarkerFont(font)) return { error: "pick a color and font from the list" };
+  const me = await getMe();
+  if (!me) return { error: "not signed in" };
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ marker_color: color, marker_font: font }).eq("id", me.id);
+  if (error) return { error: "couldn't save that, try again" };
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 export async function signOut() {

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Kalam } from "next/font/google";
+import { Caveat, Geist, Geist_Mono, Gochi_Hand, Kalam, Permanent_Marker, Rock_Salt, Sedgwick_Ave } from "next/font/google";
 import Link from "next/link";
 import { getMe } from "@/lib/data";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,6 +12,13 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 // marker-style font for names on the board, a nod to the old whiteboard
 const kalam = Kalam({ variable: "--font-kalam", subsets: ["latin"], weight: ["400", "700"] });
+// the other marker fonts people can pick on their profile (see lib/markers.ts)
+const permanentMarker = Permanent_Marker({ variable: "--font-permanent-marker", subsets: ["latin"], weight: "400" });
+const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"], weight: ["400", "700"] });
+const rockSalt = Rock_Salt({ variable: "--font-rock-salt", subsets: ["latin"], weight: "400" });
+const gochiHand = Gochi_Hand({ variable: "--font-gochi-hand", subsets: ["latin"], weight: "400" });
+const sedgwickAve = Sedgwick_Ave({ variable: "--font-sedgwick-ave", subsets: ["latin"], weight: "400" });
+const markerFonts = [permanentMarker, caveat, rockSalt, gochiHand, sedgwickAve].map((f) => f.variable).join(" ");
 
 export const metadata: Metadata = {
   title: "the board",
@@ -25,7 +32,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const me = await getMe();
 
   return (
-    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable} ${kalam.variable} h-full antialiased`}>
+    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable} ${kalam.variable} ${markerFonts} h-full antialiased`}>
       <body className="min-h-full">
         <TooltipProvider>
           {me && (
