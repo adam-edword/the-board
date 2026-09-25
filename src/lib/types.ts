@@ -51,6 +51,8 @@ export type Adjustment = {
   // college / nfl split, when known (whiteboard back-fills)
   cfb_points?: number | null;
   nfl_points?: number | null;
+  // copied from the coin (joined mid-season / matched coin), left out of "true points"
+  from_coin?: boolean;
 };
 
 // edited = an admin changed it (shown with an asterisk)

@@ -17,6 +17,9 @@ export type WeekLine = {
 
 export type PlayerStats = {
   points: number;
+  // points from their own picks: leaves out anything the coin gave them
+  // (coin fill-ins for missed picks, coin's score for weeks before joining)
+  truePoints: number;
   correct: number;
   decided: number;
   edited: boolean;
@@ -46,6 +49,7 @@ export function seasonStats(
     if (!s) {
       s = {
         points: 0,
+        truePoints: 0,
         correct: 0,
         decided: 0,
         edited: false,
@@ -100,6 +104,7 @@ export function seasonStats(
     if (right) {
       s.correct++;
       s.points += pointsFor(g);
+      if (!p.auto) s.truePoints += pointsFor(g);
       addPts(p.user_id, g.week_id, pointsFor(g));
       if (g.league === "nfl") addSplit(p.user_id, g.week_id, 0, pointsFor(g));
       else addSplit(p.user_id, g.week_id, pointsFor(g), 0);
@@ -112,6 +117,7 @@ export function seasonStats(
   for (const a of adjustments) {
     const s = get(a.user_id);
     s.points += a.points;
+    if (!a.from_coin) s.truePoints += a.points;
     s.correct += a.correct ?? 0;
     s.decided += a.decided ?? 0;
     if (a.edited) s.edited = true;
