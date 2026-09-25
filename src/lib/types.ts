@@ -37,4 +37,4 @@ export type Game = {
 };
 
 export type Side = "home" | "away";
-export type Pick = { user_id: string; game_id: number; side: Side };
+export type Pick = { user_id: string; game_id: number; side: Side; updated_at?: string };

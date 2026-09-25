@@ -39,13 +39,13 @@ export async function getWeekData(weekId: number) {
   const supabase = await createClient();
   const [games, picks, status] = await Promise.all([
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
-    supabase.from("picks").select("user_id, game_id, side, games!inner(week_id)").eq("games.week_id", weekId),
+    supabase.from("picks").select("user_id, game_id, side, updated_at, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
   ]);
   return {
     games: (games.data ?? []) as Game[],
     // only includes other people's picks for games that have kicked off (rls)
-    picks: (picks.data ?? []).map(({ user_id, game_id, side }) => ({ user_id, game_id, side })) as Pick[],
+    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at }) => ({ user_id, game_id, side, updated_at })) as Pick[],
     // who has picked what game, sides hidden
     picked: (status.data ?? []) as { user_id: string; game_id: number }[],
   };

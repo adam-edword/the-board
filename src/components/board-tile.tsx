@@ -113,17 +113,37 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
                   <path d={underlines[s]} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                 </svg>
               </div>
-              <ul className="mt-1.5 w-full space-y-0.5 leading-tight">
-                {(mine ? [me, ...others[s]] : others[s]).filter((m) => !m.bot).map((m, i) => (
-                  <li
-                    key={i}
-                    style={{ ...markerStyle(m), ...handwriting(g.id, m.name) }}
-                    className={cn("truncate origin-left", lost && "line-through decoration-2 opacity-45")}
-                  >
-                    {m.name}
-                  </li>
-                ))}
-              </ul>
+              {(() => {
+                const coinHere = others[s].some((m) => m.bot);
+                // an optimistic switch hasn't been saved yet, so it counts as the newest pick
+                const writers = [...(mine ? [{ ...me, at: side === mySide ? me.at : undefined }] : []), ...others[s]];
+                const { rows, spots } = placeNames(g.id, writers.filter((m) => !m.bot), coinHere);
+                return (
+                  <ul className="relative mt-1.5 w-full" style={{ height: rows * ROW }}>
+                    {spots.map(({ m, row, x, tilt }) => (
+                      // full-width row; the two flexible spacers push the name to a random
+                      // spot left-to-right, but it can never spill out of its side
+                      <li key={`${m.name}-${row}`} className="absolute inset-x-0 flex" style={{ top: row * ROW, height: ROW }}>
+                        <span style={{ flexGrow: x }} />
+                        <span
+                          style={{
+                            ...markerStyle(m),
+                            transform: `rotate(${tilt}deg)`,
+                            textShadow: "0 0 1.5px color-mix(in oklab, currentColor 45%, transparent)",
+                          }}
+                          className={cn(
+                            "min-w-0 truncate leading-[22px] whitespace-nowrap",
+                            lost && "line-through decoration-2 opacity-45",
+                          )}
+                        >
+                          {m.name}
+                        </span>
+                        <span style={{ flexGrow: 1 - x }} />
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
               {others[s].some((m) => m.bot) && (
                 // the coin flip lands in the corner of whichever side it picked
                 <CoinIcon
@@ -153,14 +173,28 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total }: P
   );
 }
 
-// each name is written a little crooked, and the same name keeps the same
-// wobble on a tile even as other people add theirs
-function handwriting(gameId: number, name: string): React.CSSProperties {
-  let h = gameId;
-  for (const ch of name) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
-  const r = rng(h);
-  return {
-    transform: `translateX(${jitter(r, 3).toFixed(1)}px) rotate(${jitter(r, 2.5).toFixed(2)}deg)`,
-    textShadow: "0 0 1.5px color-mix(in oklab, currentColor 45%, transparent)",
-  };
+// names get scattered around their side like a real whiteboard. each side is
+// split into invisible rows and every name gets its own row, so nothing can
+// overlap. people who picked earlier get first dibs on their favorite spot, so
+// your name stays put when someone else adds theirs. the bottom row is left
+// empty when the coin is sitting in that corner.
+const ROW = 22;
+
+function placeNames(gameId: number, writers: Marker[], coinHere: boolean) {
+  const byTime = [...writers].sort(
+    (a, b) => (a.at ? Date.parse(a.at) : Infinity) - (b.at ? Date.parse(b.at) : Infinity) || a.name.localeCompare(b.name),
+  );
+  const usable = Math.max(4 - (coinHere ? 1 : 0), byTime.length + 1);
+  const rows = usable + (coinHere ? 1 : 0);
+  const taken = new Set<number>();
+  const spots = byTime.map((m) => {
+    let h = gameId;
+    for (const ch of m.name) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0;
+    const r = rng(h);
+    let row = Math.floor(r() * usable);
+    while (taken.has(row)) row = (row + 1) % usable;
+    taken.add(row);
+    return { m, row, x: r(), tilt: jitter(r, 3) };
+  });
+  return { rows, spots };
 }

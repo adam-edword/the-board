@@ -53,20 +53,25 @@ export function BoardGrid({ games, members, picks, picked, meId }: {
         {games.map((g) => {
           const others: Record<Side, Marker[]> = { home: [], away: [] };
           let mySide: Side | null = null;
+          let myAt: string | undefined;
           for (const p of picks) {
             if (p.game_id !== g.id) continue;
-            if (p.user_id === meId) mySide = p.side;
-            else others[p.side].push(markers.get(p.user_id) ?? { name: "?", color: "white", font: "pangolin" });
+            if (p.user_id === meId) {
+              mySide = p.side;
+              myAt = p.updated_at;
+            } else {
+              const m = markers.get(p.user_id) ?? { name: "?", color: "white" as const, font: "pangolin" as const };
+              others[p.side].push({ ...m, at: p.updated_at });
+            }
           }
-          others.home.sort((a, b) => a.name.localeCompare(b.name));
-          others.away.sort((a, b) => a.name.localeCompare(b.name));
+
           return (
             <BoardTile
               key={g.id}
               game={g}
               others={others}
               mySide={mySide}
-              me={markers.get(meId) ?? { name: "you", color: "white", font: "pangolin" }}
+              me={{ ...(markers.get(meId) ?? { name: "you", color: "white", font: "pangolin" }), at: myAt }}
               pickedCount={picked.filter((p) => p.game_id === g.id).length}
               total={members.length}
             />
