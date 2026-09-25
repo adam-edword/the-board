@@ -33,6 +33,19 @@ export async function getWeeks() {
     .map((w) => ({ id: w.id, season: w.season, label: w.label, created_at: w.created_at })) as Week[];
 }
 
+// marker colors other people already have (color -> their name, or null when
+// the viewer can't see names yet). used to lock those colors in the pickers.
+export async function getTakenColors() {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("taken_colors");
+  const taken: Record<string, string | null> = {};
+  for (const row of (data ?? []) as { color: string; name: string | null }[]) {
+    // if two people share a color from before the lock, either name is fine
+    taken[row.color] = row.name;
+  }
+  return taken;
+}
+
 // newest first. the current season is the first one.
 export async function getSeasons() {
   const weeks = await getWeeks();

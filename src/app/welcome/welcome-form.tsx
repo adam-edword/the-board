@@ -3,15 +3,16 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { completeOnboarding } from "@/app/actions";
-import { MarkerFields } from "@/app/me/marker-picker";
+import { MarkerFields, freeColor, type TakenColors } from "@/app/me/marker-picker";
 import type { MarkerColor, MarkerFont } from "@/lib/markers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function WelcomeForm(props: { name: string; color: MarkerColor; font: MarkerFont }) {
+export function WelcomeForm(props: { name: string; color: MarkerColor; font: MarkerFont; taken: TakenColors }) {
   const [name, setName] = useState(props.name);
-  const [color, setColor] = useState(props.color);
+  // start on a color nobody has (the default white may already be taken)
+  const [color, setColor] = useState(() => freeColor(props.color, props.taken));
   const [font, setFont] = useState(props.font);
   const [pending, start] = useTransition();
 
@@ -29,7 +30,14 @@ export function WelcomeForm(props: { name: string; color: MarkerColor; font: Mar
         <Label htmlFor="name">what should the board call you?</Label>
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoComplete="nickname" />
       </div>
-      <MarkerFields name={name.trim() || "you"} color={color} font={font} onColor={setColor} onFont={setFont} />
+      <MarkerFields
+        name={name.trim() || "you"}
+        color={color}
+        font={font}
+        taken={props.taken}
+        onColor={setColor}
+        onFont={setFont}
+      />
       <Button type="submit" size="lg" className="w-full" disabled={pending || !name.trim()}>
         {pending ? "saving…" : "let's go"}
       </Button>

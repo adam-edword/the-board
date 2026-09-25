@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, LockIcon } from "lucide-react";
 import { toast } from "sonner";
 import { updateMarker } from "@/app/actions";
 import { cn } from "@/lib/utils";
@@ -15,10 +15,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
+// colors other people already have: color -> their name (null when you can't
+// see names yet, i.e. still waiting for approval)
+export type TakenColors = Partial<Record<MarkerColor, string | null>>;
+
+// your color if it's still free, otherwise the first free one
+export function freeColor(preferred: MarkerColor, taken: TakenColors): MarkerColor {
+  if (!(preferred in taken)) return preferred;
+  return (Object.keys(MARKER_COLORS) as MarkerColor[]).find((c) => !(c in taken)) ?? preferred;
+}
+
+export function MarkerPicker({ name, color: initialColor, font: initialFont, taken }: {
   name: string;
   color: MarkerColor;
   font: MarkerFont;
+  taken: TakenColors;
 }) {
   const [color, setColor] = useState(initialColor);
   const [font, setFont] = useState(initialFont);
@@ -39,7 +50,7 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
 
   return (
     <div className="space-y-5">
-      <MarkerFields name={name} color={color} font={font} onColor={setColor} onFont={setFont} />
+      <MarkerFields name={name} color={color} font={font} taken={taken} onColor={setColor} onFont={setFont} />
       <Button onClick={save} disabled={!dirty || pending}>
         {pending ? "saving…" : "save marker"}
       </Button>
@@ -48,10 +59,11 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
 }
 
 // preview + color + font pickers, shared by the profile page and onboarding
-export function MarkerFields({ name, color, font, onColor, onFont }: {
+export function MarkerFields({ name, color, font, taken, onColor, onFont }: {
   name: string;
   color: MarkerColor;
   font: MarkerFont;
+  taken: TakenColors;
   onColor: (c: MarkerColor) => void;
   onFont: (f: MarkerFont) => void;
 }) {
@@ -73,25 +85,36 @@ export function MarkerFields({ name, color, font, onColor, onFont }: {
       <div className="space-y-2">
         <Label>color</Label>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="marker color">
-          {(Object.keys(MARKER_COLORS) as MarkerColor[]).map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={color === c}
-              aria-label={c}
-              onClick={() => onColor(c)}
-              className={cn(
-                "grid size-9 place-items-center rounded-full ring-offset-2 ring-offset-background transition outline-none",
-                "focus-visible:ring-3 focus-visible:ring-ring/50",
-                color === c && "ring-2 ring-foreground",
-              )}
-              style={{ backgroundColor: MARKER_COLORS[c] }}
-            >
-              {color === c && <CheckIcon className="size-4 text-black/70" strokeWidth={3} />}
-            </button>
-          ))}
+          {(Object.keys(MARKER_COLORS) as MarkerColor[]).map((c) => {
+            // someone else already has it (you can always keep your own)
+            const lockedBy = c in taken && c !== color ? (taken[c] ?? "someone") : null;
+            return (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={color === c}
+                aria-label={lockedBy ? `${c}, taken by ${lockedBy}` : c}
+                title={lockedBy ? `taken by ${lockedBy.toLowerCase()}` : c}
+                disabled={!!lockedBy}
+                onClick={() => onColor(c)}
+                className={cn(
+                  "relative grid size-9 place-items-center rounded-full ring-offset-2 ring-offset-background transition outline-none",
+                  "focus-visible:ring-3 focus-visible:ring-ring/50",
+                  color === c && "ring-2 ring-foreground",
+                  lockedBy && "cursor-not-allowed opacity-30",
+                )}
+                style={{ backgroundColor: MARKER_COLORS[c] }}
+              >
+                {color === c && <CheckIcon className="size-4 text-black/70" strokeWidth={3} />}
+                {lockedBy && <LockIcon className="size-3.5 text-black/70" strokeWidth={2.5} />}
+              </button>
+            );
+          })}
         </div>
+        {Object.keys(taken).length > 0 && (
+          <p className="text-xs text-muted-foreground">locked colors are already someone&apos;s. hover to see whose.</p>
+        )}
       </div>
 
       <div className="space-y-2">

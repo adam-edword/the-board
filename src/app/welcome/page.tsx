@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getMe } from "@/lib/data";
+import { getMe, getTakenColors } from "@/lib/data";
 import { firstName } from "@/lib/format";
 import { WelcomeForm } from "./welcome-form";
 
@@ -7,6 +7,7 @@ export default async function WelcomePage() {
   const me = await getMe();
   if (!me) redirect("/login");
   if (me.onboarded) redirect("/");
+  const taken = await getTakenColors();
 
   return (
     <div className="mx-auto max-w-md space-y-6 py-4">
@@ -16,7 +17,12 @@ export default async function WelcomePage() {
           pick how your name shows up on the board. you can change it later from your profile.
         </p>
       </div>
-      <WelcomeForm name={firstName(me.name).toLowerCase()} color={me.marker_color} font={me.marker_font} />
+      <WelcomeForm
+        name={firstName(me.name).toLowerCase()}
+        color={me.marker_color}
+        font={me.marker_font}
+        taken={taken}
+      />
     </div>
   );
 }

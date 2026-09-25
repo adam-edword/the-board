@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getMe } from "@/lib/data";
+import { getMe, getTakenColors } from "@/lib/data";
 import { firstName } from "@/lib/format";
 import { updateName } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { MarkerPicker } from "./marker-picker";
 export default async function MePage() {
   const me = await getMe();
   if (!me) redirect("/login");
+  const taken = await getTakenColors();
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -20,7 +21,12 @@ export default async function MePage() {
           <CardDescription>how your name looks on the board.</CardDescription>
         </CardHeader>
         <CardContent>
-          <MarkerPicker name={firstName(me.name).toLowerCase()} color={me.marker_color} font={me.marker_font} />
+          <MarkerPicker
+            name={firstName(me.name).toLowerCase()}
+            color={me.marker_color}
+            font={me.marker_font}
+            taken={taken}
+          />
         </CardContent>
       </Card>
 

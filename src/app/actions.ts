@@ -94,7 +94,7 @@ export async function updateMarker(color: string, font: string) {
   if (!me) return { error: "not signed in" };
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ marker_color: color, marker_font: font }).eq("id", me.id);
-  if (error) return { error: "couldn't save that, try again" };
+  if (error) return { error: error.code === "23505" ? "someone just grabbed that color, pick another" : "couldn't save that, try again" };
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -110,7 +110,7 @@ export async function completeOnboarding(name: string, color: string, font: stri
     .from("profiles")
     .update({ name: clean, marker_color: color, marker_font: font, onboarded: true })
     .eq("id", me.id);
-  if (error) return { error: "couldn't save that, try again" };
+  if (error) return { error: error.code === "23505" ? "someone just grabbed that color, pick another" : "couldn't save that, try again" };
   revalidatePath("/", "layout");
   redirect("/");
 }
