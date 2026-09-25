@@ -19,11 +19,19 @@ function fmt(ms: number) {
 // "next lock in 2h 14m · BUF @ KC", ticking down. gets loud if you haven't
 // picked that game yet.
 export function LockCountdown({ games }: { games: Upcoming[] }) {
-  const [now, setNow] = useState(() => Date.now());
+  // start empty and fill in on the client, so server and browser clocks can't
+  // disagree during hydration
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 20_000);
-    return () => clearInterval(id);
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, 20_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
   }, []);
+  if (now === null) return null;
 
   const next = games
     .filter((g) => new Date(g.kickoff).getTime() > now)

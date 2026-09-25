@@ -4,13 +4,21 @@ import { createClient } from "@/lib/supabase/server";
 import type { Adjustment, Game, Pick, Profile, Week } from "@/lib/types";
 import { seasonStats } from "@/lib/stats";
 
+// everything on a profile except email, which only the admin can read
+export const PROFILE_COLUMNS =
+  "id, name, avatar_url, is_admin, approved, is_bot, onboarded, marker_color, marker_font, created_at";
+
 export const getMe = cache(async () => {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const uid = claims?.claims?.sub;
   if (!uid) return null;
-  const { data } = await supabase.from("profiles").select("*").eq("id", uid).single();
-  return (data as Profile) ?? null;
+  const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", uid).single();
+  if (!data) return null;
+  // emails aren't readable from profiles (members can't see each other's), so
+  // take your own from your login
+  const email = typeof claims?.claims?.email === "string" ? claims.claims.email : null;
+  return { ...data, email } as Profile;
 });
 
 // weeks sort by their first kickoff (newest first), so a back-filled old week
@@ -45,10 +53,10 @@ export async function getMembers() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("*")
+    .select(PROFILE_COLUMNS)
     .eq("approved", true)
     .order("name");
-  return (data ?? []) as Profile[];
+  return (data ?? []).map((p) => ({ ...p, email: null })) as Profile[];
 }
 
 export async function getWeekData(weekId: number) {

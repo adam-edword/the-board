@@ -82,7 +82,8 @@ export function seasonStats(
     const tc = teamCounts.get(p.user_id) ?? new Map<string, number>();
     tc.set(abbr, (tc.get(abbr) ?? 0) + 1);
     teamCounts.set(p.user_id, tc);
-    if (g.status !== "post" || !g.winner) continue;
+    // ties and unfinished games don't count as right or wrong
+    if (g.status !== "post" || !g.winner || g.winner === "tie") continue;
     s.decided++;
     const right = g.winner === p.side;
     if (right) {
@@ -90,7 +91,7 @@ export function seasonStats(
       s.points += pointsFor(g);
       addPts(p.user_id, g.week_id, pointsFor(g));
     }
-    if (g.featured && g.winner !== "tie") {
+    if (g.featured) {
       s.featured.total++;
       if (right) s.featured.hit++;
     }

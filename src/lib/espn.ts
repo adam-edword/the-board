@@ -63,10 +63,13 @@ function parseCompetition(league: League, espnId: string, comp: any): EspnGame {
   const homeScore = score(home);
   const awayScore = score(away);
   let winner: EspnGame["winner"] = null;
-  if (status === "post" && type.completed) {
+  if (status === "post") {
     if (home.winner) winner = "home";
     else if (away.winner) winner = "away";
-    else if (homeScore != null && homeScore === awayScore) winner = "tie";
+    else if (homeScore != null && awayScore != null) {
+      // no winner flag: fall back to the final score
+      winner = homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "tie";
+    }
   }
 
   return {

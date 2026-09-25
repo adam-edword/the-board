@@ -56,9 +56,11 @@ export default async function BoardPage(props: PageProps<"/">) {
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
   const openGames = games.filter((g) => !isLocked(g));
   const myOpenLeft = openGames.filter((g) => !mine.has(g.id)).length;
+  // only nag about games that can still be picked
+  const openIds = new Set(openGames.map((g) => g.id));
   const pickedCount = new Map<string, number>();
-  for (const p of picked) pickedCount.set(p.user_id, (pickedCount.get(p.user_id) ?? 0) + 1);
-  const slackers = members.filter((m) => (pickedCount.get(m.id) ?? 0) < games.length && m.id !== me.id && !m.is_bot);
+  for (const p of picked) if (openIds.has(p.game_id)) pickedCount.set(p.user_id, (pickedCount.get(p.user_id) ?? 0) + 1);
+  const slackers = members.filter((m) => (pickedCount.get(m.id) ?? 0) < openGames.length && m.id !== me.id && !m.is_bot);
   const anyActive = games.some((g) => g.status === "in" || (g.status === "pre" && isLocked(g)));
 
   return (

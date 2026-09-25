@@ -21,7 +21,7 @@ async function requireAdmin() {
 export async function setPick(gameId: number, side: Side | null) {
   const supabase = await createClient();
   const me = await getMe();
-  if (!me) throw new Error("not signed in");
+  if (!me) return { error: "you got signed out, refresh and sign back in" };
 
   // rls blocks late picks for regular players, but admins are allowed to edit
   // anything, so check here too. admin fixes go through adminSetPick instead
@@ -221,7 +221,7 @@ export async function setFeatured(weekId: number, gameId: number, featured: bool
     .eq("featured", true);
   if (clearError) throw clearError;
   if (featured) {
-    const { error } = await supabase.from("games").update({ featured: true }).eq("id", gameId);
+    const { error } = await supabase.from("games").update({ featured: true }).eq("id", gameId).eq("week_id", weekId);
     if (error) throw error;
   }
   revalidatePath("/", "layout");

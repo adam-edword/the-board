@@ -33,8 +33,12 @@ export function PickFixer({ weekId, games, picks, adjustments, members }: {
   function set(gameId: number, side: Side | null) {
     start(async () => {
       change({ userId, gameId, side });
-      const res = await adminSetPick(userId, gameId, side);
-      if (res?.error) toast.error(res.error);
+      try {
+        const res = await adminSetPick(userId, gameId, side);
+        if (res?.error) toast.error(res.error);
+      } catch {
+        toast.error("couldn't save that pick");
+      }
     });
   }
 
@@ -90,7 +94,15 @@ export function PickFixer({ weekId, games, picks, adjustments, members }: {
 
       <form
         key={`${userId}-${adj?.points ?? "none"}`}
-        action={(fd) => start(() => adminSetAdjustment(userId, weekId, fd))}
+        action={(fd) =>
+          start(async () => {
+            try {
+              await adminSetAdjustment(userId, weekId, fd);
+            } catch {
+              toast.error("couldn't save those points");
+            }
+          })
+        }
         className="space-y-2"
       >
         <Label htmlFor="points">bonus / penalty points this week</Label>

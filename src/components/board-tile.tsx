@@ -38,8 +38,12 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
     const value = side === next ? null : next;
     startTransition(async () => {
       setOptimisticSide(value);
-      const res = await setPick(g.id, value);
-      if (res?.error) toast.error(res.error);
+      try {
+        const res = await setPick(g.id, value);
+        if (res?.error) toast.error(res.error);
+      } catch {
+        toast.error("couldn't save that pick, check your connection");
+      }
     });
   }
 

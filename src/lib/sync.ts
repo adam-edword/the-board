@@ -42,13 +42,15 @@ export async function syncScores({ force = false } = {}) {
   const { data: games, error } = await db
     .from("games")
     .select("id, league, espn_id, kickoff, status")
-    .in("status", ["pre", "in"])
+    .or("status.in.(pre,in),and(status.eq.post,winner.is.null)")
     .lte("kickoff", horizon);
   if (error) throw error;
 
   const now = Date.now();
+  // also look at games starting within 3 hours, in case espn moved the kickoff earlier
+  const soon = now + 3 * 3600_000;
   const stale = (games ?? []).filter(
-    (g) => force || g.status === "in" || new Date(g.kickoff).getTime() <= now,
+    (g) => force || g.status !== "pre" || new Date(g.kickoff).getTime() <= soon,
   );
 
   const results = await Promise.allSettled(

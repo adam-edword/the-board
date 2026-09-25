@@ -33,7 +33,8 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
   const ranked = members
     .map((m) => ({ id: m.id, name: names.get(m.id)!, pts: totals.get(m.id) ?? 0, bot: m.is_bot, edited: edited.has(m.id) }))
     .sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));
-  const best = ranked[0]?.pts ?? 0;
+  // the leader highlight is for people, not the coin
+  const best = Math.max(0, ...ranked.filter((r) => !r.bot).map((r) => r.pts));
   // everyone who could write on the board, in a fixed order. each person's spot
   // on a tile comes from this, so it never depends on who else has picked.
   const roster = members.filter((m) => !m.is_bot).map((m) => m.id).sort();
@@ -47,7 +48,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
             href={`/players/${r.id}`}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted/50",
-              r.pts === best && best > 0 && "border-win/50 bg-win/10 text-win",
+              !r.bot && r.pts === best && best > 0 && "border-win/50 bg-win/10 text-win",
               r.id === meId && !(r.pts === best && best > 0) && "border-foreground/30",
             )}
           >

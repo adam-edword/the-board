@@ -30,7 +30,7 @@ export default async function PlayerPage(props: PageProps<"/players/[id]">) {
 
   const stats = seasonStats(seasonWeeks, games, picks, adjustments, members);
   const s = stats.get(player.id)!;
-  const rank = [...stats.entries()].filter(([, o]) => o.points > s.points).length + 1;
+  const rank = members.filter((m) => (stats.get(m.id)?.points ?? 0) > s.points).length + 1;
   const played = s.weeks.filter((w) => w.played && w.done);
   const best = played.length ? played.reduce((a, b) => (b.points > a.points ? b : a)) : null;
   const worst = played.length ? played.reduce((a, b) => (b.points < a.points ? b : a)) : null;

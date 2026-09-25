@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { CalendarPlusIcon, RefreshCwIcon, TrashIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getMe, getMembers, getWeekData, getWeeks } from "@/lib/data";
+import { PROFILE_COLUMNS, getMe, getMembers, getWeekData, getWeeks } from "@/lib/data";
 import type { Profile } from "@/lib/types";
 import { deleteWeek, refreshScores, renameWeek, startNewSeason } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,16 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const week = weeks.find((w) => String(w.id) === sp.week) ?? weeks[0];
 
   const supabase = await createClient();
-  const [{ data: people }, weekData, members] = await Promise.all([
-    supabase.from("profiles").select("*").eq("is_bot", false).order("created_at"),
+  const [{ data: profiles }, { data: emails }, weekData, members] = await Promise.all([
+    supabase.from("profiles").select(PROFILE_COLUMNS).eq("is_bot", false).order("created_at"),
+    // emails are admin-only, so they come from their own function
+    supabase.rpc("admin_people"),
     week ? getWeekData(week.id) : null,
     getMembers(),
   ]);
-  const waiting = ((people ?? []) as Profile[]).filter((p) => !p.approved).length;
+  const emailOf = new Map(((emails ?? []) as { id: string; email: string | null }[]).map((e) => [e.id, e.email]));
+  const people = (profiles ?? []).map((p) => ({ ...p, email: emailOf.get(p.id) ?? null })) as Profile[];
+  const waiting = people.filter((p) => !p.approved).length;
 
   // newest season first, each linking to its latest week
   const seasons = [...new Set(weeks.map((w) => w.season))].map((y) => ({
@@ -81,7 +85,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             ) : (
               noWeeks
             ),
-          people: <PeopleTab people={(people ?? []) as Profile[]} meId={me.id} />,
+          people: <PeopleTab people={people} meId={me.id} />,
           week: week ? (
             <Card className="max-w-xl">
               <CardHeader>

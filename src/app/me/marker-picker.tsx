@@ -27,9 +27,13 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
 
   function save() {
     start(async () => {
-      const res = await updateMarker(color, font);
-      if (res?.error) toast.error(res.error);
-      else toast.success("marker saved");
+      try {
+        const res = await updateMarker(color, font);
+        if (res?.error) toast.error(res.error);
+        else toast.success("marker saved");
+      } catch {
+        toast.error("couldn't save that, check your connection");
+      }
     });
   }
 

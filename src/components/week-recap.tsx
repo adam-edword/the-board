@@ -31,7 +31,7 @@ export function WeekRecap({ label, games, picks, adjustments, members }: {
   const sorted = [...humans].sort((a, b) => pts.get(b.id)! - pts.get(a.id)!);
   const top = pts.get(sorted[0].id)!;
   const bottom = pts.get(sorted[sorted.length - 1].id)!;
-  const winners = sorted.filter((m) => pts.get(m.id) === top);
+  const winners = top > 0 ? sorted.filter((m) => pts.get(m.id) === top) : [];
   const losers = top === bottom ? [] : sorted.filter((m) => pts.get(m.id) === bottom);
 
   // biggest upset: the finished game where the fewest people had the winner
@@ -64,13 +64,15 @@ export function WeekRecap({ label, games, picks, adjustments, members }: {
         <CardTitle className="font-heading text-lg">{label} recap</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        <p className="flex items-baseline gap-2">
-          <TrophyIcon className="size-4 shrink-0 translate-y-0.5 text-live" />
-          <span>
-            <Names list={winners} /> {winners.length > 1 ? "tied for the week" : "won the week"} with{" "}
-            <b className="font-mono">{top}</b> pts
-          </span>
-        </p>
+        {winners.length > 0 && (
+          <p className="flex items-baseline gap-2">
+            <TrophyIcon className="size-4 shrink-0 translate-y-0.5 text-live" />
+            <span>
+              <Names list={winners} /> {winners.length > 1 ? "tied for the week" : "won the week"} with{" "}
+              <b className="font-mono">{top}</b> pts
+            </span>
+          </p>
+        )}
         {losers.length > 0 && (
           <p className="flex items-baseline gap-2 text-muted-foreground">
             <TrendingDownIcon className="size-4 shrink-0 translate-y-0.5" />
