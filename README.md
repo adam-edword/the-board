@@ -50,3 +50,34 @@ cp .env.example .env.local   # fill in the secret key
 npm install
 npm run dev
 ```
+
+### local dev with local supabase
+
+no secrets or google oauth needed, just docker.
+
+#### prerequisites
+
+- **node 20.9+** (what next 16 needs) and npm
+- **[docker desktop](https://docs.docker.com/desktop/)**, installed and running. on windows, use the wsl 2 backend.
+- **free ports:** 3000 (next), 54321–54324 and 54327 (supabase api, db, studio, mail, logs)
+- the supabase cli is **not** needed globally, the `db:*` scripts run it through `npx`
+
+the first `npm run db:start` downloads the supabase images, so it takes a few minutes. after that it starts in seconds.
+
+#### run it
+
+```bash
+npm install
+npm run db:start   # local supabase: applies every migration + supabase/seed.sql
+npm run dev
+```
+
+`db:start` also writes `.env.development.local` with the local url + keys. it overrides `.env.local` during `next dev` only, so you don't need `.env.local` at all. delete it to point `npm run dev` back at the real project.
+
+the login page gets dev-only buttons to sign in as the seed users (password `password`):
+
+- **admin**: admin@local.test, approved admin
+- **player**: player@local.test, approved player
+- **new sign-up**: new@local.test, goes through onboarding and waits for approval
+
+studio is at http://127.0.0.1:54323. `npm run db:reset` wipes the local db back to migrations + seed, `npm run db:stop` shuts it down. score sync works too, since the local secret key is in that file.
