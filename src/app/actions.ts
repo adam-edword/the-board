@@ -56,6 +56,22 @@ export async function updateMarker(color: string, font: string) {
   return { ok: true };
 }
 
+export async function completeOnboarding(name: string, color: string, font: string) {
+  const clean = name.trim().slice(0, 40);
+  if (!clean) return { error: "put a name on it" };
+  if (!isMarkerColor(color) || !isMarkerFont(font)) return { error: "pick a color and font from the list" };
+  const me = await getMe();
+  if (!me) return { error: "not signed in" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ name: clean, marker_color: color, marker_font: font, onboarded: true })
+    .eq("id", me.id);
+  if (error) return { error: "couldn't save that, try again" };
+  revalidatePath("/", "layout");
+  redirect("/");
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

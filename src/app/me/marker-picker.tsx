@@ -35,6 +35,24 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
 
   return (
     <div className="space-y-5">
+      <MarkerFields name={name} color={color} font={font} onColor={setColor} onFont={setFont} />
+      <Button onClick={save} disabled={!dirty || pending}>
+        {pending ? "saving…" : "save marker"}
+      </Button>
+    </div>
+  );
+}
+
+// preview + color + font pickers, shared by the profile page and onboarding
+export function MarkerFields({ name, color, font, onColor, onFont }: {
+  name: string;
+  color: MarkerColor;
+  font: MarkerFont;
+  onColor: (c: MarkerColor) => void;
+  onFont: (f: MarkerFont) => void;
+}) {
+  return (
+    <div className="space-y-5">
       {/* preview, drawn like a slice of the board */}
       <div className="grid grid-cols-2 divide-x rounded-lg border bg-muted/20">
         {["BUF", "KC"].map((team, i) => (
@@ -58,7 +76,7 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
               role="radio"
               aria-checked={color === c}
               aria-label={c}
-              onClick={() => setColor(c)}
+              onClick={() => onColor(c)}
               className={cn(
                 "grid size-9 place-items-center rounded-full ring-offset-2 ring-offset-background transition outline-none",
                 "focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -81,7 +99,7 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
               type="button"
               role="radio"
               aria-checked={font === f}
-              onClick={() => setFont(f)}
+              onClick={() => onFont(f)}
               className={cn(
                 "flex flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left transition outline-none",
                 "hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -97,9 +115,6 @@ export function MarkerPicker({ name, color: initialColor, font: initialFont }: {
         </div>
       </div>
 
-      <Button onClick={save} disabled={!dirty || pending}>
-        {pending ? "saving…" : "save marker"}
-      </Button>
     </div>
   );
 }

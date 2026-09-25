@@ -7,6 +7,7 @@ export type Profile = {
   avatar_url: string | null;
   is_admin: boolean;
   is_bot: boolean;
+  onboarded: boolean;
   approved: boolean;
   marker_color: MarkerColor;
   marker_font: MarkerFont;

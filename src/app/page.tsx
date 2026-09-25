@@ -12,6 +12,7 @@ import { syncScores } from "@/lib/sync";
 export default async function BoardPage(props: PageProps<"/">) {
   const me = await getMe();
   if (!me) redirect("/login");
+  if (!me.onboarded) redirect("/welcome");
   if (!me.approved) {
     return (
       <Empty>

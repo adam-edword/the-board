@@ -9,6 +9,7 @@ import { getMe, getMembers, getSeasonData, getWeeks, scorePicks } from "@/lib/da
 export default async function StandingsPage() {
   const me = await getMe();
   if (!me) redirect("/login");
+  if (!me.onboarded) redirect("/welcome");
   if (!me.approved) redirect("/");
 
   const weeks = await getWeeks();
