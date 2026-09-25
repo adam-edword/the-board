@@ -9,13 +9,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { GoogleButton } from "./google-button";
-import { DevLogin } from "./dev-login";
 
 // public oauth client id (not a secret), overridable with GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_ID =
   "403189984381-3ghkqm1haaal3u4pporpjjtdbac653sb.apps.googleusercontent.com";
 
 export default async function LoginPage(props: PageProps<"/login">) {
+  // only pulled in for `next dev`, so the seed logins never ship in a production build
+  const DevLogin = process.env.NODE_ENV === "development" ? (await import("./dev-login")).DevLogin : null;
   if (await getMe()) redirect("/");
   const { error } = await props.searchParams;
 
@@ -40,7 +41,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
               sign in didn&apos;t work, try again
             </p>
           )}
-          {process.env.NODE_ENV === "development" && (
+          {DevLogin && (
             <DevLogin
               supabaseUrl={process.env.SUPABASE_URL!}
               supabaseKey={process.env.SUPABASE_PUBLISHABLE_KEY!}
