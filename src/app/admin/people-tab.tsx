@@ -1,13 +1,33 @@
+"use client";
+
+import { useOptimistic, useTransition } from "react";
+import { toast } from "sonner";
 import type { Profile } from "@/lib/types";
 import { setMember } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// ------------------------------------------------------------ people tab
+type Change = { id: string; approved: boolean; is_admin: boolean };
 
 export function PeopleTab({ people, meId }: { people: Profile[]; meId: string }) {
-  const sorted = [...people].sort((a, b) => Number(a.approved) - Number(b.approved));
+  const [shown, change] = useOptimistic(people, (all: Profile[], c: Change) =>
+    all.map((p) => (p.id === c.id ? { ...p, approved: c.approved, is_admin: c.is_admin } : p)),
+  );
+  const [, start] = useTransition();
+  const sorted = [...shown].sort((a, b) => Number(a.approved) - Number(b.approved));
+
+  function set(c: Change) {
+    start(async () => {
+      change(c);
+      try {
+        await setMember(c.id, c.approved, c.is_admin);
+      } catch {
+        toast.error("couldn't save that, try again");
+      }
+    });
+  }
+
   return (
     <Card className="max-w-3xl">
       <CardHeader>
@@ -26,17 +46,18 @@ export function PeopleTab({ people, meId }: { people: Profile[]; meId: string })
               {p.is_admin && <Badge variant="secondary">admin</Badge>}
               {p.id !== meId && (
                 <>
-                  <form action={setMember.bind(null, p.id, !p.approved, p.approved ? false : p.is_admin)}>
-                    <Button type="submit" size="sm" variant={p.approved ? "ghost" : "default"} className={p.approved ? "text-destructive" : ""}>
-                      {p.approved ? "remove" : "approve"}
-                    </Button>
-                  </form>
+                  <Button
+                    size="sm"
+                    variant={p.approved ? "ghost" : "default"}
+                    className={p.approved ? "text-destructive" : ""}
+                    onClick={() => set({ id: p.id, approved: !p.approved, is_admin: p.approved ? false : p.is_admin })}
+                  >
+                    {p.approved ? "remove" : "approve"}
+                  </Button>
                   {p.approved && (
-                    <form action={setMember.bind(null, p.id, true, !p.is_admin)}>
-                      <Button type="submit" size="sm" variant="outline">
-                        {p.is_admin ? "unmake admin" : "make admin"}
-                      </Button>
-                    </form>
+                    <Button size="sm" variant="outline" onClick={() => set({ id: p.id, approved: true, is_admin: !p.is_admin })}>
+                      {p.is_admin ? "unmake admin" : "make admin"}
+                    </Button>
                   )}
                 </>
               )}

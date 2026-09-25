@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { adminSetAdjustment, adminSetPick } from "@/app/actions";
@@ -22,11 +22,17 @@ export function PickFixer({ weekId, games, picks, adjustments, members }: {
 }) {
   const [userId, setUserId] = useState(members[0]?.id ?? "");
   const [pending, start] = useTransition();
-  const theirs = new Map(picks.filter((p) => p.user_id === userId).map((p) => [p.game_id, p]));
+  // picks update instantly and save in the background
+  const [shown, change] = useOptimistic(picks, (all: Pick[], c: { userId: string; gameId: number; side: Side | null }) => [
+    ...all.filter((p) => !(p.user_id === c.userId && p.game_id === c.gameId)),
+    ...(c.side ? [{ user_id: c.userId, game_id: c.gameId, side: c.side, edited: true }] : []),
+  ]);
+  const theirs = new Map(shown.filter((p) => p.user_id === userId).map((p) => [p.game_id, p]));
   const adj = adjustments.find((a) => a.user_id === userId);
 
   function set(gameId: number, side: Side | null) {
     start(async () => {
+      change({ userId, gameId, side });
       const res = await adminSetPick(userId, gameId, side);
       if (res?.error) toast.error(res.error);
     });
@@ -58,7 +64,6 @@ export function PickFixer({ weekId, games, picks, adjustments, members }: {
                   type="button"
                   size="sm"
                   variant={p?.side === s ? "default" : "outline"}
-                  disabled={pending}
                   onClick={() => set(g.id, s)}
                   className="min-w-16"
                 >
@@ -73,7 +78,7 @@ export function PickFixer({ weekId, games, picks, adjustments, members }: {
                 size="icon-sm"
                 variant="ghost"
                 aria-label="clear pick"
-                disabled={pending || !p}
+                disabled={!p}
                 onClick={() => set(g.id, null)}
               >
                 <XIcon />

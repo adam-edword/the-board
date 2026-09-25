@@ -103,7 +103,8 @@ export async function fetchSchedule(
   if (opts.seasonType) params.set("seasontype", String(opts.seasonType));
   if (league === "ncaaf") params.set("groups", "80");
 
-  const res = await fetch(`${BASE}/${SPORT_PATH[league]}/scoreboard?${params}`, { cache: "no-store" });
+  // schedules barely change, so cache for a couple minutes to keep browsing snappy
+  const res = await fetch(`${BASE}/${SPORT_PATH[league]}/scoreboard?${params}`, { next: { revalidate: 120 } });
   if (!res.ok) throw new Error(`espn scoreboard ${res.status}`);
   const data = await res.json();
 

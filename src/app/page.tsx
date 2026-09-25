@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BoardGrid } from "@/components/board-grid";
 import { WeekRecap } from "@/components/week-recap";
@@ -22,11 +23,15 @@ export default async function BoardPage(props: PageProps<"/">) {
     );
   }
 
-  try {
-    await syncScores();
-  } catch (e) {
-    console.error("score sync failed", e);
-  }
+  // pull fresh scores from espn after the page is sent, so it never slows the
+  // board down. the auto refresh picks up the new scores a moment later.
+  after(async () => {
+    try {
+      await syncScores();
+    } catch (e) {
+      console.error("score sync failed", e);
+    }
+  });
 
   const sp = await props.searchParams;
   const weeks = await getWeeks();
