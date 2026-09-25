@@ -47,6 +47,7 @@ function draftGame(weekId: number, league: League, e: EspnGame): Game {
     away_score: e.awayScore,
     status: e.status,
     status_detail: e.statusDetail,
+    network: e.network,
     winner: e.winner,
     featured: false,
   };

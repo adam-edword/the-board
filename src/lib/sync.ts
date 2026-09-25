@@ -62,6 +62,8 @@ export async function syncScores({ force = false } = {}) {
           kickoff: fresh.kickoff,
           status: fresh.status,
           status_detail: fresh.statusDetail,
+          // networks sometimes get announced late, so keep the latest (but never wipe one out)
+          ...(fresh.network ? { network: fresh.network } : {}),
           home_score: fresh.homeScore,
           away_score: fresh.awayScore,
           home_rank: fresh.homeRank,

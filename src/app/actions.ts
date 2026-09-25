@@ -202,6 +202,7 @@ export async function addGame(weekId: number, league: League, espnId: string, we
       away_score: g.awayScore,
       status: g.status,
       status_detail: g.statusDetail,
+      network: g.network,
       winner: g.winner,
     },
     { onConflict: "week_id,espn_id" },

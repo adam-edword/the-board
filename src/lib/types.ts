@@ -33,6 +33,7 @@ export type Game = {
   away_score: number | null;
   status: "pre" | "in" | "post" | "void";
   status_detail: string | null;
+  network: string | null;
   winner: "home" | "away" | "tie" | null;
   featured: boolean;
 };

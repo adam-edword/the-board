@@ -171,6 +171,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
         <span className={cn("flex min-w-0 items-center gap-1 truncate", live && "font-medium text-live")}>
           {live && <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-live" />}
           {g.status === "pre" ? kickoffLabel(g.kickoff) : (g.status_detail ?? "").toLowerCase()}
+          {g.network && (g.status === "pre" || live) && <span className="truncate"> on {g.network}</span>}
         </span>
         <span className="flex shrink-0 items-center gap-1">
           {g.featured && (
