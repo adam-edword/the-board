@@ -124,6 +124,33 @@ export async function fetchSchedule(
   };
 }
 
+/**
+ * which espn week (and season type) a moment falls in. espn only says on days
+ * that league has games, so this checks the nearest days too (up to 3 away).
+ */
+export async function espnWeekNear(league: League, iso: string) {
+  const day = 86_400_000;
+  const offsets = [0, 1, -1, 2, -2, 3, -3];
+  const found = await Promise.all(
+    offsets.map((o) => espnWeekOn(league, new Date(new Date(iso).getTime() + o * day)).catch(() => null)),
+  );
+  return found.find((w) => w !== null) ?? null;
+}
+
+// the espn week for one day (its date in eastern time, how espn splits days).
+// null when that league has no games that day.
+async function espnWeekOn(league: League, at: Date): Promise<{ week: number; seasonType: number } | null> {
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(at).replaceAll("-", "");
+  const params = new URLSearchParams({ dates: day, limit: "1" });
+  if (league === "ncaaf") params.set("groups", "80");
+  const res = await fetch(`${BASE}/${SPORT_PATH[league]}/scoreboard?${params}`, { next: { revalidate: 3600 } });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const week = data.week?.number;
+  const seasonType = data.leagues?.[0]?.season?.type?.type;
+  return typeof week === "number" && typeof seasonType === "number" ? { week, seasonType } : null;
+}
+
 /** latest score/status for a single game */
 export async function fetchGame(league: League, espnId: string): Promise<EspnGame> {
   const res = await fetch(`${BASE}/${SPORT_PATH[league]}/summary?event=${espnId}`, { cache: "no-store" });

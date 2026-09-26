@@ -143,17 +143,3 @@
     @apply font-sans;
   }
 }
-/* live game tiles: an outline that slowly breathes. an outline (not a ring) so
-   the featured game keeps its own ring. */
-@keyframes on-air {
-  0%, 100% { outline-color: color-mix(in oklab, var(--on-air) 90%, transparent); }
-  50% { outline-color: color-mix(in oklab, var(--on-air) 30%, transparent); }
-}
-.on-air {
-  outline: 2px solid var(--on-air);
-  outline-offset: 3px;
-  animation: on-air 2.4s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .on-air { animation: none; }
-}

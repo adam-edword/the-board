@@ -23,6 +23,9 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const tab: AdminTab = ADMIN_TABS.some((t) => t.key === sp.tab) ? (sp.tab as AdminTab) : "games";
   const weeks = await getWeeks();
   const week = weeks.find((w) => String(w.id) === sp.week) ?? weeks[0];
+  // weeks are newest first, so the one before this is next in the list
+  const after = week ? weeks[weeks.indexOf(week) + 1] : undefined;
+  const prevWeek = after && after.season === week?.season ? after : undefined;
 
   const supabase = await createClient();
   const [{ data: profiles }, weekData, members] = await Promise.all([
@@ -54,7 +57,12 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         initialTab={tab}
         waiting={waiting}
         panels={{
-          games: week && weekData ? <GamesTab weekId={week.id} label={week.label} games={weekData.games} /> : noWeeks,
+          games:
+            week && weekData ? (
+              <GamesTab weekId={week.id} prevWeekId={prevWeek?.id ?? null} label={week.label} games={weekData.games} />
+            ) : (
+              noWeeks
+            ),
           fix:
             week && weekData ? (
               weekData.games.length ? (

@@ -68,7 +68,6 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
         "gap-0 py-0",
         g.featured && "ring-2 ring-live/60",
         needsPick && !g.featured && "outline-1 outline-dashed outline-live/50",
-        live && "on-air",
       )}
     >
       <div className="relative grid grid-cols-2">
@@ -197,8 +196,6 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
               LIVE
             </span>
           )}
-          {/* kicked off but espn hasn't marked it live yet: no more picks */}
-          {locked && !live && !final && <LockIcon className="size-3 shrink-0" />}
           {g.status === "pre" ? kickoffLabel(g.kickoff, tz) : (g.status_detail ?? "").toLowerCase()}
           {g.network && (g.status === "pre" || live) && <span className="truncate"> on {g.network}</span>}
         </span>
@@ -208,6 +205,8 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
               <StarIcon className="size-3 fill-current" /> 2x
             </span>
           )}
+          {/* kicked off, no more picks */}
+          {locked && !final && <LockIcon className="size-3" />}
           {locked ? (g.league === "nfl" ? "nfl" : "cfb") : `${count}/${total} in`}
         </span>
       </div>}

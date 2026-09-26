@@ -54,7 +54,15 @@ function draftGame(weekId: number, league: League, e: EspnGame): Game {
   };
 }
 
-export function GamesWorkspace({ weekId, label, games: serverGames }: { weekId: number; label: string; games: Game[] }) {
+// the espn week the browser opens on per league (see games-tab.tsx)
+export type StartWeeks = Partial<Record<League, { week: number; st: number }>>;
+
+export function GamesWorkspace({ weekId, label, games: serverGames, start }: {
+  weekId: number;
+  label: string;
+  games: Game[];
+  start: StartWeeks;
+}) {
   const [games, change] = useOptimistic(serverGames, applyChange);
   const tz = useTimeZone();
   const [, startTransition] = useTransition();
@@ -145,7 +153,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames }: { weekId: 
         </CardContent>
       </Card>
 
-      <EspnBrowser added={new Set(games.map((g) => g.espn_id))} onAdd={add} />
+      <EspnBrowser added={new Set(games.map((g) => g.espn_id))} onAdd={add} start={start} />
     </div>
   );
 }
@@ -175,13 +183,14 @@ function loadSchedule(league: League, week?: number, st?: number): Promise<Sched
   return p;
 }
 
-function EspnBrowser({ added, onAdd }: {
+function EspnBrowser({ added, onAdd, start }: {
   added: Set<string>;
   onAdd: (league: League, g: EspnGame, schedule: Schedule) => void;
+  start: StartWeeks;
 }) {
   const tz = useTimeZone();
   const [league, setLeague] = useState<League>("nfl");
-  const [target, setTarget] = useState<{ week?: number; st?: number }>({});
+  const [target, setTarget] = useState<{ week?: number; st?: number }>(start.nfl ?? {});
   const [top25, setTop25] = useState(false);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [error, setError] = useState(false);
@@ -217,8 +226,9 @@ function EspnBrowser({ added, onAdd }: {
 
   // preload the other league too
   useEffect(() => {
-    loadSchedule(league === "nfl" ? "ncaaf" : "nfl").catch(() => {});
-  }, [league]);
+    const other = league === "nfl" ? "ncaaf" : "nfl";
+    loadSchedule(other, start[other]?.week, start[other]?.st).catch(() => {});
+  }, [league, start]);
 
   const shown = schedule?.games ?? [];
   let browse = league === "ncaaf" && top25 ? shown.filter((g) => g.homeRank || g.awayRank) : shown;
@@ -246,7 +256,7 @@ function EspnBrowser({ added, onAdd }: {
               <button
                 key={l}
                 type="button"
-                onClick={() => go(l)}
+                onClick={() => go(l, start[l]?.week, start[l]?.st)}
                 className={cn(
                   "rounded-md px-3 py-1 text-sm",
                   league === l ? "bg-background font-medium shadow-sm" : "text-muted-foreground",
