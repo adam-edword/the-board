@@ -30,7 +30,8 @@ migrations live in `supabase/migrations/` and are already applied to the "the bo
 to make someone admin by hand:
 
 ```sql
-update public.profiles set is_admin = true, approved = true where email = 'someone@gmail.com';
+update public.profiles set is_admin = true, approved = true
+where id = (select id from auth.users where email = 'someone@gmail.com');
 ```
 
 ## google sign-in

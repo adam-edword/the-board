@@ -38,10 +38,7 @@ export function PeopleTab({ people, meId }: { people: Profile[]; meId: string })
         <ul className="divide-y rounded-lg border">
           {sorted.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-              <span className="min-w-40 flex-1">
-                {p.name}
-                <span className="block text-xs text-muted-foreground">{p.email}</span>
-              </span>
+              <span className="min-w-40 flex-1">{p.name}</span>
               {!p.approved && <Badge className="bg-live/15 text-live">waiting</Badge>}
               {p.is_admin && <Badge variant="secondary">admin</Badge>}
               {p.id !== meId && (

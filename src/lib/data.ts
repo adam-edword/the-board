@@ -6,7 +6,7 @@ import { seasonStats } from "@/lib/stats";
 import { firstName } from "@/lib/format";
 import type { Marker } from "@/lib/markers";
 
-// everything on a profile except email, which only the admin can read
+// everything on a profile. emails aren't stored or shown anywhere.
 export const PROFILE_COLUMNS =
   "id, name, avatar_url, is_admin, approved, is_bot, onboarded, marker_color, marker_font, created_at";
 
@@ -16,11 +16,7 @@ export const getMe = cache(async () => {
   const uid = claims?.claims?.sub;
   if (!uid) return null;
   const { data } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", uid).single();
-  if (!data) return null;
-  // emails aren't readable from profiles (members can't see each other's), so
-  // take your own from your login
-  const email = typeof claims?.claims?.email === "string" ? claims.claims.email : null;
-  return { ...data, email } as Profile;
+  return (data as Profile | null) ?? null;
 });
 
 // weeks sort by their first kickoff (newest first), so a back-filled old week
@@ -79,7 +75,7 @@ export async function getMembers() {
     .select(PROFILE_COLUMNS)
     .eq("approved", true)
     .order("name");
-  return (data ?? []).map((p) => ({ ...p, email: null })) as Profile[];
+  return (data ?? []) as Profile[];
 }
 
 export async function getWeekData(weekId: number) {

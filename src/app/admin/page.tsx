@@ -25,15 +25,12 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const week = weeks.find((w) => String(w.id) === sp.week) ?? weeks[0];
 
   const supabase = await createClient();
-  const [{ data: profiles }, { data: emails }, weekData, members] = await Promise.all([
+  const [{ data: profiles }, weekData, members] = await Promise.all([
     supabase.from("profiles").select(PROFILE_COLUMNS).eq("is_bot", false).order("created_at"),
-    // emails are admin-only, so they come from their own function
-    supabase.rpc("admin_people"),
     week ? getWeekData(week.id) : null,
     getMembers(),
   ]);
-  const emailOf = new Map(((emails ?? []) as { id: string; email: string | null }[]).map((e) => [e.id, e.email]));
-  const people = (profiles ?? []).map((p) => ({ ...p, email: emailOf.get(p.id) ?? null })) as Profile[];
+  const people = (profiles ?? []) as Profile[];
   const waiting = people.filter((p) => !p.approved).length;
 
   // newest season first, each linking to its latest week

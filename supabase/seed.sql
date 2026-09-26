@@ -28,6 +28,6 @@ where email like '%@local.test';
 
 -- handle_new_user already made their profiles, just set them up
 update public.profiles set is_admin = true, approved = true, onboarded = true, marker_color = 'blue', marker_font = 'pangolin'
-where email = 'admin@local.test';
+where id = (select id from auth.users where email = 'admin@local.test');
 update public.profiles set approved = true, onboarded = true, marker_color = 'red', marker_font = 'gaegu'
-where email = 'player@local.test';
+where id = (select id from auth.users where email = 'player@local.test');

@@ -2,7 +2,6 @@ import type { MarkerColor, MarkerFont } from "@/lib/markers";
 
 export type Profile = {
   id: string;
-  email: string | null;
   name: string;
   avatar_url: string | null;
   is_admin: boolean;

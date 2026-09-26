@@ -38,7 +38,7 @@ export function SiteNav({ me }: { me: Profile }) {
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuLabel className="truncate font-normal text-muted-foreground">{me.email}</DropdownMenuLabel>
+          <DropdownMenuLabel className="truncate font-normal text-muted-foreground">{me.name}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/me">

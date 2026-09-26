@@ -14,7 +14,8 @@ export default function PrivacyPage() {
       <ul>
         <li>
           <strong>From Google sign-in:</strong> your name, email address, and profile photo. Nothing else is
-          requested from your Google account.
+          requested from your Google account. Your email is only used by our login provider to sign you in. The app
+          doesn&apos;t store it or show it to anyone, including the admin.
         </li>
         <li>
           <strong>What you do in the app:</strong> your picks, the time you made them, and the display name you set.
@@ -34,7 +35,6 @@ export default function PrivacyPage() {
       <h2>Who can see it</h2>
       <ul>
         <li>Other approved members see your display name, profile photo, and picks.</li>
-        <li>The site admin can also see your email address so they can approve you.</li>
         <li>
           Data is stored with Supabase, our database and login provider, which processes it on our behalf. The app
           itself is hosted on a private server run by the site admin.

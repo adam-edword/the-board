@@ -35,7 +35,7 @@ export default async function MePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">your name</CardTitle>
-          <CardDescription>signed in as {me.email}</CardDescription>
+          <CardDescription>shows up in standings and on your player page.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={updateName} className="space-y-2">
