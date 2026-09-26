@@ -12,6 +12,7 @@ live at https://theboard.eddtv.org (self-hosted on coolify, auto-deploys from `m
 - **standings:** points, record, week wins, weeks beating the coin, and a "contra" stat. past seasons stay viewable, with a champion banner.
 - **player pages:** tap a name for their season: points by week, featured record, picking style.
 - **weekly recap:** once a week is final: winner, last place, featured game, upset of the week, who the coin beat.
+- **discord:** optional webhook posts. a reminder 24h and 1h before each week's first kickoff (with who still needs picks), and the recap + standings once the week is final.
 - **onboarding:** new people pick a name, marker color and font on first visit. the admin approves them before they can see the board.
 - **admin:** pick each week's games from espn, star the featured game, fix picks (shown with an asterisk), approve people, start a new season.
 
@@ -21,7 +22,17 @@ next.js 16 (app router) · supabase (postgres, google sign-in, row level securit
 
 ## env vars (all runtime)
 
-see `.env.example`: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `SITE_URL`, optional `CRON_SECRET`.
+see `.env.example`: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `SITE_URL`, optional `CRON_SECRET` and `DISCORD_WEBHOOK_URL`.
+
+## discord reminders + reports
+
+set `CRON_SECRET` and `DISCORD_WEBHOOK_URL`, then add a coolify scheduled task (app > scheduled tasks) that runs every 15 minutes (`*/15 * * * *`):
+
+```sh
+wget -qO- --header="Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron
+```
+
+each run syncs scores and posts whatever is due. `public.notifications` remembers what went out, so every reminder / report posts once per week.
 
 ## database
 
