@@ -42,6 +42,7 @@
   --color-win: var(--win);
   --color-loss: var(--loss);
   --color-live: var(--live);
+  --color-on-air: var(--on-air);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -92,6 +93,8 @@
   --win: oklch(0.8 0.18 145);
   --loss: oklch(0.7 0.19 22);
   --live: oklch(0.82 0.16 80);
+  /* games in progress, red like a tv live bug */
+  --on-air: oklch(0.64 0.23 25);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -139,4 +142,18 @@
   html {
     @apply font-sans;
   }
+}
+/* live game tiles: an outline that slowly breathes. an outline (not a ring) so
+   the featured game keeps its own ring. */
+@keyframes on-air {
+  0%, 100% { outline-color: color-mix(in oklab, var(--on-air) 90%, transparent); }
+  50% { outline-color: color-mix(in oklab, var(--on-air) 30%, transparent); }
+}
+.on-air {
+  outline: 2px solid var(--on-air);
+  outline-offset: 3px;
+  animation: on-air 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .on-air { animation: none; }
 }

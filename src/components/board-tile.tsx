@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { StarIcon } from "lucide-react";
+import { LockIcon, StarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { setPick } from "@/app/actions";
 import { cn } from "@/lib/utils";
@@ -68,9 +68,11 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
         "gap-0 py-0",
         g.featured && "ring-2 ring-live/60",
         needsPick && !g.featured && "outline-1 outline-dashed outline-live/50",
+        live && "on-air",
       )}
     >
       <div className="relative grid grid-cols-2">
+
         <svg
           aria-hidden
           viewBox="0 0 100 100"
@@ -85,6 +87,9 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
           const lost = final && !!g.winner && !won;
           const mine = side === s;
           const score = s === "home" ? g.home_score : g.away_score;
+          const otherScore = s === "home" ? g.away_score : g.home_score;
+          // while it's on, the team that's behind gets dimmed
+          const trailing = live && (score ?? 0) < (otherScore ?? 0);
           const rank = s === "home" ? g.home_rank : g.away_rank;
           return (
             <button
@@ -115,7 +120,14 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
                   </div>
                 </div>
                 {g.status !== "pre" && g.status !== "void" && (
-                  <div className={cn("mt-1 font-mono text-xl leading-none font-semibold tabular-nums", won && "text-win", lost && "text-muted-foreground")}>
+                  <div
+                    className={cn(
+                      "mt-1 font-mono text-xl leading-none font-semibold tabular-nums",
+                      won && "text-win",
+                      (lost || trailing) && "text-muted-foreground",
+                      live && !trailing && "font-bold",
+                    )}
+                  >
                     {score ?? 0}
                   </div>
                 )}
@@ -177,8 +189,16 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
         })}
       </div>
       {!preview && <div className="flex items-center justify-between gap-1 border-t px-2 py-1.5 text-[11px] text-muted-foreground">
-        <span className={cn("flex min-w-0 items-center gap-1 truncate", live && "font-medium text-live")}>
-          {live && <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-live" />}
+        <span className={cn("flex min-w-0 items-center gap-1 truncate", live && "font-medium text-on-air")}>
+          {live && (
+            // like a tv live bug
+            <span className="flex shrink-0 items-center gap-1 rounded-sm bg-on-air px-1.5 py-0.5 text-[10px] leading-none font-bold tracking-wider text-white">
+              <span className="size-1.5 animate-pulse rounded-full bg-white" />
+              LIVE
+            </span>
+          )}
+          {/* kicked off but espn hasn't marked it live yet: no more picks */}
+          {locked && !live && !final && <LockIcon className="size-3 shrink-0" />}
           {g.status === "pre" ? kickoffLabel(g.kickoff, tz) : (g.status_detail ?? "").toLowerCase()}
           {g.network && (g.status === "pre" || live) && <span className="truncate"> on {g.network}</span>}
         </span>
