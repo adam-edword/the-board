@@ -6,6 +6,8 @@ export type Profile = {
   avatar_url: string | null;
   is_admin: boolean;
   is_bot: boolean;
+  // plays like a person, picks come from claude (see lib/ai-player.ts)
+  is_ai: boolean;
   onboarded: boolean;
   approved: boolean;
   marker_color: MarkerColor;
@@ -63,4 +65,6 @@ export type Pick = {
   updated_at?: string;
   edited?: boolean;
   auto?: boolean;
+  // the ai player's one-liner on why
+  reason?: string | null;
 };

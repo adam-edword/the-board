@@ -8,7 +8,7 @@ import type { Marker } from "@/lib/markers";
 
 // everything on a profile. emails aren't stored or shown anywhere.
 export const PROFILE_COLUMNS =
-  "id, name, avatar_url, is_admin, approved, is_bot, onboarded, marker_color, marker_font, created_at";
+  "id, name, avatar_url, is_admin, approved, is_bot, is_ai, onboarded, marker_color, marker_font, created_at";
 
 export const getMe = cache(async () => {
   const supabase = await createClient();
@@ -82,20 +82,20 @@ export async function getWeekData(weekId: number) {
   const supabase = await createClient();
   const [games, picks, status, adjustments] = await Promise.all([
     supabase.from("games").select("*").eq("week_id", weekId).order("kickoff").order("id"),
-    supabase.from("picks").select("user_id, game_id, side, updated_at, edited, auto, games!inner(week_id)").eq("games.week_id", weekId),
+    supabase.from("picks").select("user_id, game_id, side, updated_at, edited, auto, reason, games!inner(week_id)").eq("games.week_id", weekId),
     supabase.rpc("pick_status", { wid: weekId }),
     supabase.from("score_adjustments").select("user_id, week_id, points, correct, decided, edited, cfb_points, nfl_points, from_coin").eq("week_id", weekId),
   ]);
   return {
     games: (games.data ?? []) as Game[],
-    // only includes other people's picks for games that have kicked off (rls)
-    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at, edited, auto }) => ({
+    picks: (picks.data ?? []).map(({ user_id, game_id, side, updated_at, edited, auto, reason }) => ({
       user_id,
       game_id,
       side,
       updated_at,
       edited,
       auto,
+      reason,
     })) as Pick[],
     // who has picked what game, sides hidden
     picked: (status.data ?? []) as { user_id: string; game_id: number }[],

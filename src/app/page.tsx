@@ -12,6 +12,8 @@ import { firstName, isLocked } from "@/lib/format";
 import { getMe, getMembers, getSeasonData, getWeekData, getWeeks } from "@/lib/data";
 import { seasonStats } from "@/lib/stats";
 import { syncScores } from "@/lib/sync";
+import { runAiPlayer } from "@/lib/ai-player";
+import { AiTakes } from "@/components/ai-takes";
 
 export default async function BoardPage(props: PageProps<"/">) {
   const me = await getMe();
@@ -32,6 +34,12 @@ export default async function BoardPage(props: PageProps<"/">) {
       await syncScores();
     } catch (e) {
       console.error("score sync failed", e);
+    }
+    // the ai player makes his picks on wednesdays (does nothing most loads)
+    try {
+      await runAiPlayer();
+    } catch (e) {
+      console.error("ai player failed", e);
     }
   });
 
@@ -106,6 +114,7 @@ export default async function BoardPage(props: PageProps<"/">) {
         <>
           <WeekRecap label={week.label} games={games} picks={picks} adjustments={adjustments} members={members} />
           <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} seasonTotals={seasonTotals} />
+          <AiTakes games={games} picks={picks} members={members} />
           <p className="text-center text-xs text-muted-foreground">
             tap a side to put your name on it, tap again to erase. picks lock at kickoff.
           </p>

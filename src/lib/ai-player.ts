@@ -1,0 +1,222 @@
+import "server-only";
+import Anthropic from "@anthropic-ai/sdk";
+import { createAdminClient } from "@/lib/supabase/server";
+
+// the ai player: a regular member of the board whose picks come from claude.
+// once a week (wednesday, like a normal guy filling out his picks) he looks
+// up each game, makes his picks, and leaves a line or two on why.
+
+// who he is. his name, marker and favorite team live here and on his profile.
+const PERSONA = {
+  team: "TBD", // the one team he can't be objective about
+};
+
+const MODEL = "claude-opus-5-5";
+// how long to wait after a failed or partial run before trying again
+const RETRY_MS = 20 * 60_000;
+// games kicking off sooner than this get left to the coin
+const MIN_LEAD_MS = 10 * 60_000;
+
+type OpenGame = {
+  id: number;
+  league: "nfl" | "ncaaf";
+  kickoff: string;
+  home_name: string;
+  home_rank: number | null;
+  away_name: string;
+  away_rank: number | null;
+  network: string | null;
+};
+
+type AiPick = { game_id: number; side: "home" | "away"; reason: string };
+
+/**
+ * makes the ai player's picks for any game that's due. a game is due from
+ * noon central on the wednesday of its week until shortly before kickoff.
+ * safe to call on every page load: it bails early when nothing is due, and
+ * only one attempt runs every 20 minutes.
+ */
+export async function runAiPlayer() {
+  if (!process.env.ANTHROPIC_API_KEY || !process.env.SUPABASE_SECRET_KEY) return { skipped: "not configured" };
+  const db = createAdminClient();
+
+  const { data: ai } = await db.from("profiles").select("id, name").eq("is_ai", true).eq("approved", true).maybeSingle();
+  if (!ai) return { skipped: "no ai player" };
+
+  const now = Date.now();
+  const { data: games } = await db
+    .from("games")
+    .select("id, league, kickoff, home_name, home_rank, away_name, away_rank, network")
+    .eq("status", "pre")
+    .gt("kickoff", new Date(now + MIN_LEAD_MS).toISOString())
+    .order("kickoff");
+  const { data: mine } = await db.from("picks").select("game_id").eq("user_id", ai.id);
+  const picked = new Set((mine ?? []).map((p) => p.game_id));
+  const due = ((games ?? []) as OpenGame[]).filter(
+    (g) => !picked.has(g.id) && now >= pickDay(new Date(g.kickoff)).getTime(),
+  );
+  if (!due.length) return { skipped: "nothing due" };
+
+  // claim the slot so overlapping page loads don't both run it
+  const { data: claimed } = await db
+    .from("sync_state")
+    .update({ ai_attempted_at: new Date().toISOString() })
+    .eq("id", 1)
+    .lte("ai_attempted_at", new Date(now - RETRY_MS).toISOString())
+    .select("id");
+  if (!claimed?.length) return { skipped: "throttled" };
+
+  const picks = await askClaude(ai.name, due);
+  const allowed = new Map(due.map((g) => [g.id, g]));
+  const rows = picks
+    .filter((p) => allowed.has(p.game_id) && (p.side === "home" || p.side === "away"))
+    // a pick can't land after kickoff, even if the research ran long
+    .filter((p) => new Date(allowed.get(p.game_id)!.kickoff).getTime() > Date.now())
+    .map((p) => ({
+      user_id: ai.id,
+      game_id: p.game_id,
+      side: p.side,
+      reason: p.reason.trim().slice(0, 300) || null,
+      auto: false,
+      edited: false,
+      updated_at: new Date().toISOString(),
+    }));
+  if (rows.length) {
+    const { error } = await db.from("picks").upsert(rows, { onConflict: "user_id,game_id", ignoreDuplicates: true });
+    if (error) throw error;
+  }
+  return { picked: rows.length, due: due.length };
+}
+
+// noon central on the wednesday on or before kickoff. that's when he picks.
+function pickDay(kickoff: Date) {
+  const tz = "America/Chicago";
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" })
+      .formatToParts(kickoff)
+      .map((p) => [p.type, p.value]),
+  );
+  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
+  const back = (weekday - 3 + 7) % 7;
+  // wall-clock noon that day in utc, then shift by central's offset at that moment
+  const noonUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - back, 12);
+  const offset = centralOffsetMs(new Date(noonUtc), tz);
+  const at = new Date(noonUtc - offset);
+  // a wednesday game before noon picks the week before
+  return at.getTime() > kickoff.getTime() ? new Date(at.getTime() - 7 * 86_400_000) : at;
+}
+
+// how far the zone is from utc at a moment (negative for central)
+function centralOffsetMs(at: Date, tz: string) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+    })
+      .formatToParts(at)
+      .map((x) => [x.type, x.value]),
+  );
+  const wall = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), Number(p.second));
+  return wall - at.getTime();
+}
+
+const SUBMIT_PICKS: Anthropic.Beta.BetaTool = {
+  name: "submit_picks",
+  description: "Lock in your picks for this week. Call this once, at the end, with a pick for every game listed.",
+  strict: true,
+  input_schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["picks"],
+    properties: {
+      picks: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["game_id", "side", "reason"],
+          properties: {
+            game_id: { type: "integer", description: "the id of the game from the list" },
+            side: { type: "string", enum: ["home", "away"], description: "which team you're taking" },
+            reason: { type: "string", description: "one or two short, casual sentences on why" },
+          },
+        },
+      },
+    },
+  },
+};
+
+function systemPrompt(name: string) {
+  return `You're ${name}, a regular guy in a weekly straight-up pick'em with your friends. You like football, you watch most weekends, but you're not obsessed and you're not a stats nerd. Every week you pick a winner for each game on the board: no spreads, just who wins. The featured game is worth double.
+
+Before you pick, you do what a normal fan does: look up the games. Check who's hurt, who's starting at quarterback, how the teams have been playing, and what the betting line says. Then go with your read. You mostly trust the favorites but you'll take an underdog when something tells you to.
+
+Your team is ${PERSONA.team}. You can't be objective about them: you pick them to win pretty much every time, even when you probably shouldn't.
+
+For each pick, write a reason: one or two short sentences, casual, the way you'd text the group chat. No stats dumps, no hedging, no emojis, lowercase is fine.
+
+When you're done, call submit_picks once with a pick for every game.`;
+}
+
+function gameList(games: OpenGame[]) {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return games
+    .map((g) => {
+      const team = (n: string, r: number | null) => (r ? `#${r} ${n}` : n);
+      const when = `${fmt.format(new Date(g.kickoff))} central${g.network ? ` on ${g.network}` : ""}`;
+      return `- game ${g.id} (${g.league === "nfl" ? "NFL" : "college"}): ${team(g.away_name, g.away_rank)} (away) at ${team(g.home_name, g.home_rank)} (home), ${when}`;
+    })
+    .join("\n");
+}
+
+async function askClaude(name: string, games: OpenGame[]): Promise<AiPick[]> {
+  const client = new Anthropic();
+  const today = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", dateStyle: "full" }).format(new Date());
+  const messages: Anthropic.Beta.BetaMessageParam[] = [
+    {
+      role: "user",
+      content: `It's ${today}. Here's this week's board:\n\n${gameList(games)}\n\nLook into the games, then submit your picks.`,
+    },
+  ];
+
+  // web search runs on anthropic's side. a long research turn can pause, in
+  // which case we hand the turn back and let it keep going.
+  for (let turn = 0; turn < 8; turn++) {
+    const stream = client.beta.messages.stream({
+      model: MODEL,
+      max_tokens: 64000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium" },
+      system: systemPrompt(name),
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 25 }, SUBMIT_PICKS],
+      messages,
+    });
+    const message = await stream.finalMessage();
+
+    const submit = message.content.find(
+      (b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use" && b.name === "submit_picks",
+    );
+    if (submit && message.stop_reason !== "max_tokens") return parsePicks(submit.input);
+
+    if (message.stop_reason === "pause_turn") {
+      messages.push({ role: "assistant", content: message.content });
+      continue;
+    }
+    if (message.stop_reason === "refusal") throw new Error("ai player: request was declined");
+    // finished without submitting: nudge once more
+    messages.push({ role: "assistant", content: message.content });
+    messages.push({ role: "user", content: "Submit your picks now with submit_picks." });
+  }
+  throw new Error("ai player: never submitted picks");
+}
+
+function parsePicks(input: unknown): AiPick[] {
+  const list = (input as { picks?: unknown })?.picks;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((p) => {
+    const { game_id, side, reason } = (p ?? {}) as Record<string, unknown>;
+    if (typeof game_id !== "number" || (side !== "home" && side !== "away")) return [];
+    return [{ game_id, side, reason: typeof reason === "string" ? reason : "" }];
+  });
+}
