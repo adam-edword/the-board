@@ -9,7 +9,7 @@ import { WeekPicker } from "@/components/week-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { firstName, isLocked } from "@/lib/format";
-import { getMe, getMembers, getSeasonData, getWeekData, getWeeks } from "@/lib/data";
+import { getAiSummary, getMe, getMembers, getSeasonData, getWeekData, getWeeks } from "@/lib/data";
 import { seasonStats } from "@/lib/stats";
 import { syncScores } from "@/lib/sync";
 import { runAiPlayer } from "@/lib/ai-player";
@@ -59,10 +59,11 @@ export default async function BoardPage(props: PageProps<"/">) {
   }
 
   const week = weeks.find((w) => String(w.id) === sp.week) ?? weeks[0];
-  const [{ games, picks, picked, adjustments }, members, season] = await Promise.all([
+  const [{ games, picks, picked, adjustments }, members, season, aiSummary] = await Promise.all([
     getWeekData(week.id),
     getMembers(),
     getSeasonData(week.season),
+    getAiSummary(week.id),
   ]);
   // season totals for the standings strip above the board
   const stats = seasonStats(season.weeks, season.games, season.picks, season.adjustments, members);
@@ -114,7 +115,7 @@ export default async function BoardPage(props: PageProps<"/">) {
         <>
           <WeekRecap label={week.label} games={games} picks={picks} adjustments={adjustments} members={members} />
           <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} seasonTotals={seasonTotals} />
-          <AiTakes games={games} picks={picks} members={members} />
+          <AiTakes summary={aiSummary} members={members} />
           <p className="text-center text-xs text-muted-foreground">
             tap a side to put your name on it, tap again to erase. picks lock at kickoff.
           </p>

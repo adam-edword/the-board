@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 // the ai player: a regular member of the board whose picks come from claude.
 // once a week (wednesday, like a normal guy filling out his picks) he looks
-// up each game, makes his picks, and leaves a line or two on why.
+// up each game, makes his picks, and sums up his week in a sentence or two.
 
 // who he is. his name and marker live on his profile.
 const PERSONA: { team: string | null } = {
@@ -32,7 +32,7 @@ type OpenGame = {
   featured: boolean;
 };
 
-type AiPick = { game_id: number; side: "home" | "away"; reason: string };
+type AiPick = { game_id: number; side: "home" | "away" };
 
 /**
  * makes the ai player's picks for any game that's due. a game is due from
@@ -77,7 +77,7 @@ export async function runAiPlayer() {
     .select("id");
   if (!claimed?.length) return { skipped: "throttled" };
 
-  const picks = await askClaude(ai.name, due);
+  const { picks, summary } = await askClaude(ai.name, due);
   const allowed = new Map(due.map((g) => [g.id, g]));
   const rows = picks
     .filter((p) => allowed.has(p.game_id) && (p.side === "home" || p.side === "away"))
@@ -87,7 +87,6 @@ export async function runAiPlayer() {
       user_id: ai.id,
       game_id: p.game_id,
       side: p.side,
-      reason: p.reason.trim().slice(0, 300) || null,
       auto: false,
       edited: false,
       updated_at: new Date().toISOString(),
@@ -95,9 +94,17 @@ export async function runAiPlayer() {
   if (rows.length) {
     const { error } = await db.from("picks").upsert(rows, { onConflict: "user_id,game_id", ignoreDuplicates: true });
     if (error) throw error;
+    // one summary per week. a later run for a game added late keeps the first.
+    const weekId = allowed.get(rows[0].game_id)!.week_id;
+    if (summary) {
+      await db.from("ai_summaries").upsert(
+        { week_id: weekId, summary: summary.slice(0, 500) },
+        { onConflict: "week_id", ignoreDuplicates: true },
+      );
+    }
     // tell the group chat. a failed post shouldn't undo the picks.
     try {
-      await postToDiscord(ai.name, rows, allowed, db);
+      await postToDiscord(ai.name, rows, allowed, summary, db);
     } catch (e) {
       console.error("ai player: discord post failed", e);
     }
@@ -105,12 +112,13 @@ export async function runAiPlayer() {
   return { picked: rows.length, due: due.length };
 }
 
-// posts his picks to the group's discord channel (DISCORD_WEBHOOK_URL), one
-// line per game with his reason
+// posts his picks to the group's discord channel (DISCORD_WEBHOOK_URL): his
+// summary, then one short line per game
 async function postToDiscord(
   name: string,
-  rows: { game_id: number; side: "home" | "away"; reason: string | null }[],
+  rows: { game_id: number; side: "home" | "away" }[],
   games: Map<number, OpenGame>,
+  summary: string,
   db: ReturnType<typeof createAdminClient>,
 ) {
   const url = process.env.DISCORD_WEBHOOK_URL;
@@ -121,7 +129,7 @@ async function postToDiscord(
   const { data: week } = await db.from("weeks").select("label").eq("id", picked[0].g.week_id).maybeSingle();
   const lines = picked.map(({ r, g }) => {
     const [win, lose] = r.side === "home" ? [g.home_abbr, g.away_abbr] : [g.away_abbr, g.home_abbr];
-    return `**${win}** over ${lose}${g.featured ? " ⭐" : ""}${r.reason ? `\n${r.reason}` : ""}`;
+    return `**${win}** over ${lose}${g.featured ? " ⭐" : ""}`;
   });
   const site = process.env.SITE_URL?.replace(/\/$/, "");
   const res = await fetch(url, {
@@ -134,7 +142,7 @@ async function postToDiscord(
         {
           title: `${name.toLowerCase()}'s picks${week?.label ? ` for ${week.label}` : ""}`,
           url: site || undefined,
-          description: lines.join("\n\n").slice(0, 4000),
+          description: `${summary ? `${summary}\n\n` : ""}${lines.join("\n")}`.slice(0, 4000),
           color: 0xd97757,
         },
       ],
@@ -181,18 +189,21 @@ const SUBMIT_PICKS: Anthropic.Beta.BetaTool = {
   input_schema: {
     type: "object",
     additionalProperties: false,
-    required: ["picks"],
+    required: ["summary", "picks"],
     properties: {
+      summary: {
+        type: "string",
+        description: "one or two short, casual sentences about your week of picks",
+      },
       picks: {
         type: "array",
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["game_id", "side", "reason"],
+          required: ["game_id", "side"],
           properties: {
             game_id: { type: "integer", description: "the id of the game from the list" },
             side: { type: "string", enum: ["home", "away"], description: "which team you're taking" },
-            reason: { type: "string", description: "one or two short, casual sentences on why" },
           },
         },
       },
@@ -208,7 +219,7 @@ function systemPrompt(name: string) {
 
 Before you pick, you do what a normal fan does: look up the games. Check who's hurt, who's starting at quarterback, how the teams have been playing, and what the betting line says. Then go with your read. You mostly trust the favorites but you'll take an underdog when something tells you to.${team}
 
-For each pick, write a reason: one or two short sentences, casual, the way you'd text the group chat. No stats dumps, no hedging, no emojis, lowercase is fine.
+Along with your picks, write a summary of your week: one or two short sentences, casual, the way you'd text the group chat. Your gut on the week, a pick you feel great or nervous about, that kind of thing. No stats dumps, no hedging, no emojis, lowercase is fine.
 
 When you're done, call submit_picks once with a pick for every game.`;
 }
@@ -224,7 +235,7 @@ function gameList(games: OpenGame[]) {
     .join("\n");
 }
 
-async function askClaude(name: string, games: OpenGame[]): Promise<AiPick[]> {
+async function askClaude(name: string, games: OpenGame[]): Promise<{ picks: AiPick[]; summary: string }> {
   const client = new Anthropic();
   const today = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", dateStyle: "full" }).format(new Date());
   const messages: Anthropic.Beta.BetaMessageParam[] = [
@@ -267,12 +278,12 @@ async function askClaude(name: string, games: OpenGame[]): Promise<AiPick[]> {
   throw new Error("ai player: never submitted picks");
 }
 
-function parsePicks(input: unknown): AiPick[] {
-  const list = (input as { picks?: unknown })?.picks;
-  if (!Array.isArray(list)) return [];
-  return list.flatMap((p) => {
-    const { game_id, side, reason } = (p ?? {}) as Record<string, unknown>;
+function parsePicks(input: unknown): { picks: AiPick[]; summary: string } {
+  const { picks: list, summary } = (input ?? {}) as { picks?: unknown; summary?: unknown };
+  const picks = (Array.isArray(list) ? list : []).flatMap((p) => {
+    const { game_id, side } = (p ?? {}) as Record<string, unknown>;
     if (typeof game_id !== "number" || (side !== "home" && side !== "away")) return [];
-    return [{ game_id, side, reason: typeof reason === "string" ? reason : "" }];
+    return [{ game_id, side: side as AiPick["side"] }];
   });
+  return { picks, summary: typeof summary === "string" ? summary.trim() : "" };
 }

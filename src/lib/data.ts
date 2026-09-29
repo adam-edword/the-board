@@ -52,6 +52,13 @@ export async function getOtherMarkers(meId: string): Promise<Marker[]> {
     .map((m) => ({ id: m.id, name: firstName(m.name).toLowerCase(), color: m.marker_color, font: m.marker_font, bot: m.is_bot }));
 }
 
+// the ai player's one or two sentences on a week, if he's written them
+export async function getAiSummary(weekId: number) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("ai_summaries").select("summary").eq("week_id", weekId).maybeSingle();
+  return data?.summary ?? null;
+}
+
 // newest first. the current season is the first one.
 export async function getSeasons() {
   const weeks = await getWeeks();
