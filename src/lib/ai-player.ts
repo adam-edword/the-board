@@ -56,15 +56,22 @@ export async function runAiPlayer() {
     .order("kickoff");
   const { data: mine } = await db.from("picks").select("game_id").eq("user_id", ai.id);
   const picked = new Set((mine ?? []).map((p) => p.game_id));
+  // the admin can flip sync_state.ai_pick_now to have him pick early: every
+  // open game in the next week counts as due, then the flag clears
+  const { data: state } = await db.from("sync_state").select("ai_pick_now").eq("id", 1).single();
+  const early = !!state?.ai_pick_now;
+  const weekOut = now + 7 * 86_400_000;
   const due = ((games ?? []) as OpenGame[]).filter(
-    (g) => !picked.has(g.id) && now >= pickDay(new Date(g.kickoff)).getTime(),
+    (g) =>
+      !picked.has(g.id) &&
+      (now >= pickDay(new Date(g.kickoff)).getTime() || (early && new Date(g.kickoff).getTime() <= weekOut)),
   );
   if (!due.length) return { skipped: "nothing due" };
 
   // claim the slot so overlapping page loads don't both run it
   const { data: claimed } = await db
     .from("sync_state")
-    .update({ ai_attempted_at: new Date().toISOString() })
+    .update({ ai_attempted_at: new Date().toISOString(), ai_pick_now: false })
     .eq("id", 1)
     .lte("ai_attempted_at", new Date(now - RETRY_MS).toISOString())
     .select("id");
