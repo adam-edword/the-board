@@ -69,10 +69,10 @@ export function markerStyle(m: { color: MarkerColor; font: MarkerFont }): React.
     return {
       fontSize: font.size,
       display: "inline-block",
-      height: "0.85em",
-      width: `${0.85 * WORDMARK_RATIO}em`,
+      height: "0.6em",
+      width: `${0.6 * WORDMARK_RATIO}em`,
       flexShrink: 0,
-      verticalAlign: "-0.1em",
+      verticalAlign: "0",
       overflow: "hidden",
       color: "transparent",
       backgroundColor: color,
