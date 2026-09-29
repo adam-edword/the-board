@@ -56,8 +56,30 @@ export type Marker = {
   auto?: boolean;
 };
 
+// claude's "font" is his actual wordmark (public/claude-wordmark.png), used
+// as a mask over his color. the name text stays underneath for screen readers
+// and copy/paste, just invisible.
+const WORDMARK_RATIO = 715 / 174;
+
 export function markerStyle(m: { color: MarkerColor; font: MarkerFont }): React.CSSProperties {
   const font = MARKER_FONTS[m.font] ?? MARKER_FONTS.pangolin;
+  if (m.font === "claude-serif") {
+    const color = MARKER_COLORS[m.color] ?? MARKER_COLORS.clay;
+    const mask = "url(/claude-wordmark.png) left center / contain no-repeat";
+    return {
+      fontSize: font.size,
+      display: "inline-block",
+      height: "0.85em",
+      width: `${0.85 * WORDMARK_RATIO}em`,
+      flexShrink: 0,
+      verticalAlign: "-0.1em",
+      overflow: "hidden",
+      color: "transparent",
+      backgroundColor: color,
+      mask,
+      WebkitMask: mask,
+    };
+  }
   return { color: MARKER_COLORS[m.color] ?? MARKER_COLORS.white, fontFamily: font.family, fontSize: font.size };
 }
 
