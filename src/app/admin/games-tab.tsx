@@ -3,14 +3,15 @@ import { espnWeekNear, type League } from "@/lib/espn";
 import type { Game } from "@/lib/types";
 import { GamesWorkspace, type StartWeeks } from "./games-workspace";
 
-export async function GamesTab({ weekId, prevWeekId, label, games }: {
+export async function GamesTab({ weekId, prevWeekId, label, games, locked }: {
   weekId: number;
   prevWeekId: number | null;
   label: string;
   games: Game[];
+  locked: boolean;
 }) {
-  const start = await startWeeks(games, prevWeekId);
-  return <GamesWorkspace key={weekId} weekId={weekId} label={label} games={games} start={start} />;
+  const start = locked ? {} : await startWeeks(games, prevWeekId);
+  return <GamesWorkspace key={weekId} weekId={weekId} label={label} games={games} start={start} locked={locked} />;
 }
 
 // which espn week the game browser should open on for each league, so it lines

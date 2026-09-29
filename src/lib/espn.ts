@@ -27,6 +27,10 @@ export type EspnGame = {
   statusDetail: string;
   winner: "home" | "away" | "tie" | null;
   network: string | null;
+  // the betting line, like "OSU -7.5", when espn has one
+  line: string | null;
+  // espn's note on the game, like a rivalry name
+  note: string | null;
 };
 
 export type Schedule = {
@@ -90,6 +94,8 @@ function parseCompetition(league: League, espnId: string, comp: any): EspnGame {
     statusDetail: type.shortDetail ?? type.detail ?? "",
     winner,
     network: comp.broadcasts?.[0]?.names?.[0] ?? comp.broadcasts?.[0]?.media?.shortName ?? null,
+    line: comp.odds?.[0]?.details ?? null,
+    note: comp.notes?.[0]?.headline ?? null,
   };
 }
 
@@ -149,6 +155,30 @@ async function espnWeekOn(league: League, at: Date): Promise<{ week: number; sea
   const week = data.week?.number;
   const seasonType = data.leagues?.[0]?.season?.type?.type;
   return typeof week === "number" && typeof seasonType === "number" ? { week, seasonType } : null;
+}
+
+/** a games table row for an espn game on a board week */
+export function toGameRow(weekId: number, g: EspnGame) {
+  return {
+    week_id: weekId,
+    league: g.league,
+    espn_id: g.espnId,
+    kickoff: g.kickoff,
+    home_name: g.homeName,
+    home_abbr: g.homeAbbr,
+    home_logo: g.homeLogo,
+    home_rank: g.homeRank,
+    away_name: g.awayName,
+    away_abbr: g.awayAbbr,
+    away_logo: g.awayLogo,
+    away_rank: g.awayRank,
+    home_score: g.homeScore,
+    away_score: g.awayScore,
+    status: g.status,
+    status_detail: g.statusDetail,
+    network: g.network,
+    winner: g.winner,
+  };
 }
 
 /** latest score/status for a single game */

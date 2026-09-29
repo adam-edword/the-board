@@ -59,7 +59,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
         panels={{
           games:
             week && weekData ? (
-              <GamesTab weekId={week.id} prevWeekId={prevWeek?.id ?? null} label={week.label} games={weekData.games} />
+              <GamesTab weekId={week.id} prevWeekId={prevWeek?.id ?? null} label={week.label} games={weekData.games} locked={week.auto_slate} />
             ) : (
               noWeeks
             ),

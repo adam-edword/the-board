@@ -14,7 +14,9 @@ export type Profile = {
   marker_font: MarkerFont;
 };
 
-export type Week = { id: number; season: number; label: string; created_at: string };
+// auto_slate: the commissioner agent picked its games (lib/slate-picker.ts),
+// so they're locked in admin
+export type Week = { id: number; season: number; label: string; created_at: string; auto_slate: boolean };
 
 export type Game = {
   id: number;
@@ -37,6 +39,8 @@ export type Game = {
   network: string | null;
   winner: "home" | "away" | "tie" | null;
   featured: boolean;
+  // why the commissioner put it on the board
+  slate_reason?: string | null;
 };
 
 export type Side = "home" | "away";

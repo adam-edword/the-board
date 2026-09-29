@@ -57,11 +57,13 @@ function draftGame(weekId: number, league: League, e: EspnGame): Game {
 // the espn week the browser opens on per league (see games-tab.tsx)
 export type StartWeeks = Partial<Record<League, { week: number; st: number }>>;
 
-export function GamesWorkspace({ weekId, label, games: serverGames, start }: {
+export function GamesWorkspace({ weekId, label, games: serverGames, start, locked }: {
   weekId: number;
   label: string;
   games: Game[];
   start: StartWeeks;
+  // the commissioner picked these: no adds, no moving the 2x
+  locked: boolean;
 }) {
   const [games, change] = useOptimistic(serverGames, applyChange);
   const tz = useTimeZone();
@@ -87,13 +89,17 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start }: {
     );
 
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+    <div className={cn("grid items-start gap-5", !locked && "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]")}>
       <Card className="lg:sticky lg:top-20">
         <CardHeader>
           <CardTitle>
             {label} <span className="text-muted-foreground">· {games.length} games</span>
           </CardTitle>
-          <CardDescription>star one as the featured game (worth 2 pts).</CardDescription>
+          <CardDescription>
+            {locked
+              ? "the commissioner picked these, so they're locked. only pull a game if it's broken (postponed, cancelled, bad espn data)."
+              : "star one as the featured game (worth 2 pts)."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {sorted.length === 0 ? (
@@ -118,30 +124,35 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start }: {
                         {g.league === "nfl" ? "nfl" : "college"} · {kickoffLabel(g.kickoff, tz)}
                       </div>
                     </div>
-                    <Button
-                      size="icon-sm"
-                      variant={g.featured ? "secondary" : "ghost"}
-                      aria-label={g.featured ? "unfeature" : "make featured"}
-                      className={g.featured ? "text-live" : "text-muted-foreground"}
-                      disabled={saving}
-                      onClick={() =>
-                        run(
-                          { type: "feature", id: g.id, on: !g.featured },
-                          () => setFeatured(weekId, g.id, !g.featured),
-                          "couldn't change the featured game",
-                        )
-                      }
-                    >
-                      <StarIcon className={g.featured ? "fill-current" : ""} />
-                    </Button>
+                    {locked ? (
+                      g.featured && <StarIcon className="size-4 fill-current text-live" />
+                    ) : (
+                      <Button
+                        size="icon-sm"
+                        variant={g.featured ? "secondary" : "ghost"}
+                        aria-label={g.featured ? "unfeature" : "make featured"}
+                        className={g.featured ? "text-live" : "text-muted-foreground"}
+                        disabled={saving}
+                        onClick={() =>
+                          run(
+                            { type: "feature", id: g.id, on: !g.featured },
+                            () => setFeatured(weekId, g.id, !g.featured),
+                            "couldn't change the featured game",
+                          )
+                        }
+                      >
+                        <StarIcon className={g.featured ? "fill-current" : ""} />
+                      </Button>
+                    )}
                     <Button
                       size="icon-sm"
                       variant="ghost"
                       aria-label="remove game"
                       disabled={saving}
-                      onClick={() =>
-                        run({ type: "remove", id: g.id }, () => removeGame(g.id), `couldn't remove ${g.away_abbr} @ ${g.home_abbr}`)
-                      }
+                      onClick={() => {
+                        if (locked && !window.confirm(`pull ${g.away_abbr} @ ${g.home_abbr}? only do this if the game is broken.`)) return;
+                        run({ type: "remove", id: g.id }, () => removeGame(g.id), `couldn't remove ${g.away_abbr} @ ${g.home_abbr}`);
+                      }}
                     >
                       <XIcon />
                     </Button>
@@ -153,7 +164,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start }: {
         </CardContent>
       </Card>
 
-      <EspnBrowser added={new Set(games.map((g) => g.espn_id))} onAdd={add} start={start} />
+      {!locked && <EspnBrowser added={new Set(games.map((g) => g.espn_id))} onAdd={add} start={start} />}
     </div>
   );
 }

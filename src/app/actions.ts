@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fetchSchedule, type League } from "@/lib/espn";
+import { fetchSchedule, toGameRow, type League } from "@/lib/espn";
 import { syncScores } from "@/lib/sync";
 import { getMe } from "@/lib/data";
 import { isLocked } from "@/lib/format";
@@ -185,29 +185,8 @@ export async function addGame(weekId: number, league: League, espnId: string, we
   if (!g) throw new Error("game not found on espn");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("games").upsert(
-    {
-      week_id: weekId,
-      league,
-      espn_id: g.espnId,
-      kickoff: g.kickoff,
-      home_name: g.homeName,
-      home_abbr: g.homeAbbr,
-      home_logo: g.homeLogo,
-      home_rank: g.homeRank,
-      away_name: g.awayName,
-      away_abbr: g.awayAbbr,
-      away_logo: g.awayLogo,
-      away_rank: g.awayRank,
-      home_score: g.homeScore,
-      away_score: g.awayScore,
-      status: g.status,
-      status_detail: g.statusDetail,
-      network: g.network,
-      winner: g.winner,
-    },
-    { onConflict: "week_id,espn_id" },
-  );
+  await requireHandPicked(supabase, weekId);
+  const { error } = await supabase.from("games").upsert(toGameRow(weekId, g), { onConflict: "week_id,espn_id" });
   if (error) throw error;
   revalidatePath("/", "layout");
 }
@@ -216,6 +195,7 @@ export async function addGame(weekId: number, league: League, espnId: string, we
 export async function setFeatured(weekId: number, gameId: number, featured: boolean) {
   await requireAdmin();
   const supabase = await createClient();
+  await requireHandPicked(supabase, weekId);
   const { error: clearError } = await supabase
     .from("games")
     .update({ featured: false })
@@ -257,4 +237,11 @@ export async function refreshScores() {
 // any real marker except the ones saved for the ai player
 function pickable(color: unknown, font: unknown) {
   return isMarkerColor(color) && isMarkerFont(font) && !RESERVED_COLORS.includes(color) && !RESERVED_FONTS.includes(font);
+}
+
+// weeks the commissioner agent picked are locked: no adding games or moving
+// the 2x. removing stays open, but only for broken games (see games-workspace)
+async function requireHandPicked(supabase: Awaited<ReturnType<typeof createClient>>, weekId: number) {
+  const { data } = await supabase.from("weeks").select("auto_slate").eq("id", weekId).single();
+  if (data?.auto_slate) throw new Error("this week's games were picked by the commissioner and are locked");
 }

@@ -13,6 +13,8 @@ import { getAiSummary, getMe, getMembers, getSeasonData, getWeekData, getWeeks }
 import { seasonStats } from "@/lib/stats";
 import { syncScores } from "@/lib/sync";
 import { runAiPlayer } from "@/lib/ai-player";
+import { runSlatePicker } from "@/lib/slate-picker";
+import { SlateReasons } from "@/components/slate-reasons";
 import { AiTakes } from "@/components/ai-takes";
 
 export default async function BoardPage(props: PageProps<"/">) {
@@ -35,7 +37,13 @@ export default async function BoardPage(props: PageProps<"/">) {
     } catch (e) {
       console.error("score sync failed", e);
     }
-    // the ai player makes his picks on wednesdays (does nothing most loads)
+    // tuesdays the commissioner posts the weekend's games, wednesdays the ai
+    // player picks them (both do nothing most loads)
+    try {
+      await runSlatePicker();
+    } catch (e) {
+      console.error("slate picker failed", e);
+    }
     try {
       await runAiPlayer();
     } catch (e) {
@@ -114,6 +122,7 @@ export default async function BoardPage(props: PageProps<"/">) {
       ) : (
         <>
           <WeekRecap label={week.label} games={games} picks={picks} adjustments={adjustments} members={members} />
+          <SlateReasons games={games} />
           <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} seasonTotals={seasonTotals} />
           <AiTakes summary={aiSummary} members={members} />
           <p className="text-center text-xs text-muted-foreground">

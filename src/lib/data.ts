@@ -28,7 +28,7 @@ export async function getWeeks() {
     w.games.length ? Math.min(...w.games.map((g) => new Date(g.kickoff).getTime())) : Infinity;
   return (data ?? [])
     .sort((a, b) => b.season - a.season || start(b) - start(a) || b.id - a.id)
-    .map((w) => ({ id: w.id, season: w.season, label: w.label, created_at: w.created_at })) as Week[];
+    .map((w) => ({ id: w.id, season: w.season, label: w.label, created_at: w.created_at, auto_slate: w.auto_slate })) as Week[];
 }
 
 // marker colors other people already have (color -> their name, or null when
