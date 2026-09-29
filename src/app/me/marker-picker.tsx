@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import {
   MARKER_COLORS,
   MARKER_FONTS,
+  RESERVED_COLORS,
+  RESERVED_FONTS,
   markerStyle,
   type Marker,
   type MarkerColor,
@@ -18,6 +20,9 @@ import { BoardTile } from "@/components/board-tile";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
+const PICKABLE_COLORS = (Object.keys(MARKER_COLORS) as MarkerColor[]).filter((c) => !RESERVED_COLORS.includes(c));
+const PICKABLE_FONTS = (Object.keys(MARKER_FONTS) as MarkerFont[]).filter((f) => !RESERVED_FONTS.includes(f));
+
 // colors other people already have: color -> their name (null when you can't
 // see names yet, i.e. still waiting for approval)
 export type TakenColors = Partial<Record<MarkerColor, string | null>>;
@@ -25,7 +30,7 @@ export type TakenColors = Partial<Record<MarkerColor, string | null>>;
 // your color if it's still free, otherwise the first free one
 export function freeColor(preferred: MarkerColor, taken: TakenColors): MarkerColor {
   if (!(preferred in taken)) return preferred;
-  return (Object.keys(MARKER_COLORS) as MarkerColor[]).find((c) => !(c in taken)) ?? preferred;
+  return PICKABLE_COLORS.find((c) => !(c in taken)) ?? preferred;
 }
 
 export function MarkerPicker({ id, name, color: initialColor, font: initialFont, taken, others }: {
@@ -122,7 +127,7 @@ export function MarkerFields({ id, name, color, font, taken, others, onColor, on
       <div className="space-y-2">
         <Label>color</Label>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="marker color">
-          {(Object.keys(MARKER_COLORS) as MarkerColor[]).map((c) => {
+          {PICKABLE_COLORS.map((c) => {
             // someone else already has it (you can always keep your own)
             const lockedBy = c in taken && c !== color ? (taken[c] ?? "someone") : null;
             return (
@@ -157,7 +162,7 @@ export function MarkerFields({ id, name, color, font, taken, others, onColor, on
       <div className="space-y-2">
         <Label>font</Label>
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="marker font">
-          {(Object.keys(MARKER_FONTS) as MarkerFont[]).map((f) => (
+          {PICKABLE_FONTS.map((f) => (
             <button
               key={f}
               type="button"

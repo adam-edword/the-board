@@ -1,5 +1,5 @@
 // marker colors + handwriting fonts people can pick for their name on the board.
-// keys must match the check constraints in supabase/migrations (colors: 0022, fonts: 0007).
+// keys must match the check constraints in supabase/migrations (colors: 0025, fonts: 0025).
 // each color belongs to one person at a time (see profiles_color_lock in 0021).
 
 // in rainbow order (the pickers show them in this order), neutrals last.
@@ -19,6 +19,8 @@ export const MARKER_COLORS = {
   pink: "#f472b6",
   white: "#f4f4f5",
   gray: "#a6a09b",
+  // claude's orange. his alone, not offered in the pickers.
+  clay: "#d97757",
 } as const;
 
 // css vars are set up by next/font in app/layout.tsx. size evens out how big
@@ -30,7 +32,13 @@ export const MARKER_FONTS = {
   "fuzzy-bubbles": { label: "fuzzy bubbles", family: "var(--font-fuzzy-bubbles)", size: 14 },
   gaegu: { label: "gaegu", family: "var(--font-gaegu)", size: 18 },
   "covered-by-your-grace": { label: "covered by your grace", family: "var(--font-covered-by-your-grace)", size: 17 },
+  // claude's, like the color
+  "claude-serif": { label: "claude", family: "var(--font-claude-serif)", size: 16 },
 } as const;
+
+// markers only the ai player uses, hidden from everyone's pickers
+export const RESERVED_COLORS: readonly string[] = ["clay"];
+export const RESERVED_FONTS: readonly string[] = ["claude-serif"];
 
 export type MarkerColor = keyof typeof MARKER_COLORS;
 export type MarkerFont = keyof typeof MARKER_FONTS;

@@ -8,6 +8,7 @@ import {
   Lacquer,
   Pangolin,
   Protest_Revolution,
+  Source_Serif_4,
 } from "next/font/google";
 import Link from "next/link";
 import { getMe } from "@/lib/data";
@@ -27,7 +28,9 @@ const lacquer = Lacquer({ variable: "--font-lacquer", subsets: ["latin"], weight
 const fuzzyBubbles = Fuzzy_Bubbles({ variable: "--font-fuzzy-bubbles", subsets: ["latin"], weight: "400" });
 const gaegu = Gaegu({ variable: "--font-gaegu", subsets: ["latin"], weight: "400" });
 const coveredByYourGrace = Covered_By_Your_Grace({ variable: "--font-covered-by-your-grace", subsets: ["latin"], weight: "400" });
-const markerFonts = [pangolin, protestRevolution, lacquer, fuzzyBubbles, gaegu, coveredByYourGrace]
+// claude's own marker, a book serif like his wordmark. not in the pickers.
+const claudeSerif = Source_Serif_4({ variable: "--font-claude-serif", subsets: ["latin"], weight: "500" });
+const markerFonts = [pangolin, protestRevolution, lacquer, fuzzyBubbles, gaegu, coveredByYourGrace, claudeSerif]
   .map((f) => f.variable)
   .join(" ");
 

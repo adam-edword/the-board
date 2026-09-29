@@ -6,9 +6,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 // once a week (wednesday, like a normal guy filling out his picks) he looks
 // up each game, makes his picks, and leaves a line or two on why.
 
-// who he is. his name, marker and favorite team live here and on his profile.
-const PERSONA = {
-  team: "TBD", // the one team he can't be objective about
+// who he is. his name and marker live on his profile.
+const PERSONA: { team: string | null } = {
+  team: null, // the one team he can't be objective about, once he has one
 };
 
 const MODEL = "claude-opus-5-5";
@@ -26,6 +26,7 @@ type OpenGame = {
   away_name: string;
   away_rank: number | null;
   network: string | null;
+  featured: boolean;
 };
 
 type AiPick = { game_id: number; side: "home" | "away"; reason: string };
@@ -46,7 +47,7 @@ export async function runAiPlayer() {
   const now = Date.now();
   const { data: games } = await db
     .from("games")
-    .select("id, league, kickoff, home_name, home_rank, away_name, away_rank, network")
+    .select("id, league, kickoff, home_name, home_rank, away_name, away_rank, network, featured")
     .eq("status", "pre")
     .gt("kickoff", new Date(now + MIN_LEAD_MS).toISOString())
     .order("kickoff");
@@ -146,11 +147,12 @@ const SUBMIT_PICKS: Anthropic.Beta.BetaTool = {
 };
 
 function systemPrompt(name: string) {
-  return `You're ${name}, a regular guy in a weekly straight-up pick'em with your friends. You like football, you watch most weekends, but you're not obsessed and you're not a stats nerd. Every week you pick a winner for each game on the board: no spreads, just who wins. The featured game is worth double.
+  const team = PERSONA.team
+    ? `\n\nYour team is ${PERSONA.team}. You can't be objective about them: you pick them to win pretty much every time, even when you probably shouldn't.`
+    : "";
+  return `You're ${name}, playing in a weekly straight-up pick'em with your friends. Think of yourself as a regular guy in the group. You like football, you watch most weekends, but you're not obsessed and you're not a stats nerd. Every week you pick a winner for each game on the board: no spreads, just who wins. The featured game is worth double.
 
-Before you pick, you do what a normal fan does: look up the games. Check who's hurt, who's starting at quarterback, how the teams have been playing, and what the betting line says. Then go with your read. You mostly trust the favorites but you'll take an underdog when something tells you to.
-
-Your team is ${PERSONA.team}. You can't be objective about them: you pick them to win pretty much every time, even when you probably shouldn't.
+Before you pick, you do what a normal fan does: look up the games. Check who's hurt, who's starting at quarterback, how the teams have been playing, and what the betting line says. Then go with your read. You mostly trust the favorites but you'll take an underdog when something tells you to.${team}
 
 For each pick, write a reason: one or two short sentences, casual, the way you'd text the group chat. No stats dumps, no hedging, no emojis, lowercase is fine.
 
@@ -163,7 +165,7 @@ function gameList(games: OpenGame[]) {
     .map((g) => {
       const team = (n: string, r: number | null) => (r ? `#${r} ${n}` : n);
       const when = `${fmt.format(new Date(g.kickoff))} central${g.network ? ` on ${g.network}` : ""}`;
-      return `- game ${g.id} (${g.league === "nfl" ? "NFL" : "college"}): ${team(g.away_name, g.away_rank)} (away) at ${team(g.home_name, g.home_rank)} (home), ${when}`;
+      return `- game ${g.id} (${g.league === "nfl" ? "NFL" : "college"}${g.featured ? ", featured, worth double" : ""}): ${team(g.away_name, g.away_rank)} (away) at ${team(g.home_name, g.home_rank)} (home), ${when}`;
     })
     .join("\n");
 }

@@ -8,7 +8,7 @@ import { syncScores } from "@/lib/sync";
 import { getMe } from "@/lib/data";
 import { isLocked } from "@/lib/format";
 import type { Side } from "@/lib/types";
-import { isMarkerColor, isMarkerFont } from "@/lib/markers";
+import { RESERVED_COLORS, RESERVED_FONTS, isMarkerColor, isMarkerFont } from "@/lib/markers";
 
 async function requireAdmin() {
   const me = await getMe();
@@ -89,7 +89,7 @@ export async function updateName(formData: FormData) {
 }
 
 export async function updateMarker(color: string, font: string) {
-  if (!isMarkerColor(color) || !isMarkerFont(font)) return { error: "pick a color and font from the list" };
+  if (!pickable(color, font)) return { error: "pick a color and font from the list" };
   const me = await getMe();
   if (!me) return { error: "not signed in" };
   const supabase = await createClient();
@@ -102,7 +102,7 @@ export async function updateMarker(color: string, font: string) {
 export async function completeOnboarding(name: string, color: string, font: string) {
   const clean = name.trim().slice(0, 40);
   if (!clean) return { error: "put a name on it" };
-  if (!isMarkerColor(color) || !isMarkerFont(font)) return { error: "pick a color and font from the list" };
+  if (!pickable(color, font)) return { error: "pick a color and font from the list" };
   const me = await getMe();
   if (!me) return { error: "not signed in" };
   const supabase = await createClient();
@@ -252,4 +252,9 @@ export async function refreshScores() {
   await requireAdmin();
   await syncScores({ force: true });
   revalidatePath("/", "layout");
+}
+
+// any real marker except the ones saved for the ai player
+function pickable(color: unknown, font: unknown) {
+  return isMarkerColor(color) && isMarkerFont(font) && !RESERVED_COLORS.includes(color) && !RESERVED_FONTS.includes(font);
 }
