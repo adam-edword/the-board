@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { espnWeekNear, type League } from "@/lib/espn";
 import type { Game } from "@/lib/types";
-import { GamesWorkspace, type StartWeeks } from "./games-workspace";
+import { getMe } from "@/lib/data";
+import { GamesWorkspace, type StartWeeks, type SwapView } from "./games-workspace";
 
 export async function GamesTab({ weekId, prevWeekId, label, games, locked }: {
   weekId: number;
@@ -10,8 +11,38 @@ export async function GamesTab({ weekId, prevWeekId, label, games, locked }: {
   games: Game[];
   locked: boolean;
 }) {
-  const start = locked ? {} : await startWeeks(games, prevWeekId);
-  return <GamesWorkspace key={weekId} weekId={weekId} label={label} games={games} start={start} locked={locked} />;
+  const [start, swaps] = await Promise.all([startWeeks(games, prevWeekId), locked ? getSwaps(weekId) : []]);
+  return <GamesWorkspace key={weekId} weekId={weekId} label={label} games={games} start={start} locked={locked} swaps={swaps} />;
+}
+
+// pending swaps for a commissioner week, plus the last few that were settled
+async function getSwaps(weekId: number): Promise<SwapView[]> {
+  const supabase = await createClient();
+  const [me, { data: swaps }, { data: admins }] = await Promise.all([
+    getMe(),
+    supabase
+      .from("slate_swaps")
+      .select("id, out_label, in_label, status, in_kickoff, proposed_by, slate_swap_votes(admin_id, approve)")
+      .eq("week_id", weekId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase.from("profiles").select("id, name").eq("is_admin", true),
+  ]);
+  const name = (id: string) => (admins ?? []).find((a) => a.id === id)?.name.toLowerCase() ?? "someone";
+  return (swaps ?? []).map((s) => {
+    const votes = (s.slate_swap_votes ?? []) as { admin_id: string; approve: boolean }[];
+    const expired = s.status === "pending" && new Date(s.in_kickoff).getTime() <= Date.now();
+    return {
+      id: s.id,
+      outLabel: s.out_label,
+      inLabel: s.in_label,
+      status: expired ? "expired" : (s.status as SwapView["status"]),
+      proposedBy: name(s.proposed_by),
+      approvedBy: votes.filter((v) => v.approve).map((v) => name(v.admin_id)),
+      waitingOn: (admins ?? []).filter((a) => !votes.some((v) => v.admin_id === a.id)).map((a) => a.name.toLowerCase()),
+      canVote: !!me && !votes.some((v) => v.admin_id === me.id),
+    };
+  });
 }
 
 // which espn week the game browser should open on for each league, so it lines

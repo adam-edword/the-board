@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useOptimistic, useState, useTransition } from "react";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, PlusIcon, StarIcon, XIcon } from "lucide-react";
+import { ArrowLeftRightIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, PlusIcon, StarIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
-import { addGame, removeGame, setFeatured } from "@/app/actions";
+import { addGame, proposeSwap, removeGame, setFeatured, voteSwap } from "@/app/actions";
 import { cn } from "@/lib/utils";
-import { kickoffLabel } from "@/lib/format";
+import { isLocked, kickoffLabel } from "@/lib/format";
 import { useTimeZone } from "@/lib/use-time-zone";
 import type { EspnGame, League, Schedule } from "@/lib/espn";
 import type { Game } from "@/lib/types";
@@ -57,17 +57,60 @@ function draftGame(weekId: number, league: League, e: EspnGame): Game {
 // the espn week the browser opens on per league (see games-tab.tsx)
 export type StartWeeks = Partial<Record<League, { week: number; st: number }>>;
 
-export function GamesWorkspace({ weekId, label, games: serverGames, start, locked }: {
+// a proposed change to a commissioner week (see games-tab.tsx)
+export type SwapView = {
+  id: number;
+  outLabel: string;
+  inLabel: string;
+  status: "pending" | "done" | "rejected" | "expired";
+  proposedBy: string;
+  approvedBy: string[];
+  waitingOn: string[];
+  canVote: boolean;
+};
+
+export function GamesWorkspace({ weekId, label, games: serverGames, start, locked, swaps = [] }: {
   weekId: number;
   label: string;
   games: Game[];
   start: StartWeeks;
-  // the commissioner picked these: no adds, no moving the 2x
+  // the commissioner picked these: only a swap every admin approves changes them
   locked: boolean;
+  swaps?: SwapView[];
 }) {
   const [games, change] = useOptimistic(serverGames, applyChange);
   const tz = useTimeZone();
   const [, startTransition] = useTransition();
+  // the game being swapped out, while picking its replacement
+  const [swapOut, setSwapOut] = useState<Game | null>(null);
+  const [swapping, startSwap] = useTransition();
+
+  function propose(league: League, e: EspnGame, schedule: Schedule) {
+    if (!swapOut) return;
+    const out = swapOut;
+    startSwap(async () => {
+      try {
+        const res = await proposeSwap(weekId, out.id, league, e.espnId, schedule.week, schedule.seasonType);
+        if (res?.error) return void toast.error(res.error);
+        toast.success(res?.applied ? "swapped" : "swap proposed. waiting on the other admins");
+        setSwapOut(null);
+      } catch {
+        toast.error("couldn't propose that swap");
+      }
+    });
+  }
+
+  function vote(id: number, approve: boolean) {
+    startSwap(async () => {
+      try {
+        const res = await voteSwap(id, approve);
+        if (res?.error) return void toast.error(res.error);
+        toast.success(!approve ? "swap rejected" : res?.applied ? "swapped" : "approved. waiting on the other admins");
+      } catch {
+        toast.error("couldn't save your vote");
+      }
+    });
+  }
   const sorted = [...games].sort((a, b) => a.kickoff.localeCompare(b.kickoff) || a.id - b.id);
 
   function run(c: Change, save: () => Promise<unknown>, failMsg: string) {
@@ -89,15 +132,16 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
     );
 
   return (
-    <div className={cn("grid items-start gap-5", !locked && "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]")}>
-      <Card className="lg:sticky lg:top-20">
+    <div className={cn("grid items-start gap-5", (!locked || swapOut) && "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]")}>
+      <div className="space-y-5 lg:sticky lg:top-20">
+      <Card>
         <CardHeader>
           <CardTitle>
             {label} <span className="text-muted-foreground">· {games.length} games</span>
           </CardTitle>
           <CardDescription>
             {locked
-              ? "the commissioner picked these, so they're locked. only pull a game if it's broken (postponed, cancelled, bad espn data)."
+              ? "the commissioner picked these, so they're locked. changing one takes a swap that every admin approves."
               : "star one as the featured game (worth 2 pts)."}
           </CardDescription>
         </CardHeader>
@@ -144,18 +188,28 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
                         <StarIcon className={g.featured ? "fill-current" : ""} />
                       </Button>
                     )}
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label="remove game"
-                      disabled={saving}
-                      onClick={() => {
-                        if (locked && !window.confirm(`pull ${g.away_abbr} @ ${g.home_abbr}? only do this if the game is broken.`)) return;
-                        run({ type: "remove", id: g.id }, () => removeGame(g.id), `couldn't remove ${g.away_abbr} @ ${g.home_abbr}`);
-                      }}
-                    >
-                      <XIcon />
-                    </Button>
+                    {locked ? (
+                      <Button
+                        size="sm"
+                        variant={swapOut?.id === g.id ? "secondary" : "ghost"}
+                        disabled={isLocked(g)}
+                        onClick={() => setSwapOut(swapOut?.id === g.id ? null : g)}
+                      >
+                        <ArrowLeftRightIcon /> {swapOut?.id === g.id ? "cancel" : "swap"}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label="remove game"
+                        disabled={saving}
+                        onClick={() =>
+                          run({ type: "remove", id: g.id }, () => removeGame(g.id), `couldn't remove ${g.away_abbr} @ ${g.home_abbr}`)
+                        }
+                      >
+                        <XIcon />
+                      </Button>
+                    )}
                   </li>
                 );
               })}
@@ -164,8 +218,60 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
         </CardContent>
       </Card>
 
+      {locked && swaps.length > 0 && <SwapList swaps={swaps} onVote={vote} busy={swapping} />}
+      </div>
+
       {!locked && <EspnBrowser added={new Set(games.map((g) => g.espn_id))} onAdd={add} start={start} />}
+      {locked && swapOut && (
+        <EspnBrowser
+          added={new Set(games.map((g) => g.espn_id))}
+          onAdd={propose}
+          start={start}
+          title={`swap out ${swapOut.away_abbr} @ ${swapOut.home_abbr} for…`}
+          actionLabel="swap in"
+        />
+      )}
     </div>
+  );
+}
+
+function SwapList({ swaps, onVote, busy }: { swaps: SwapView[]; onVote: (id: number, approve: boolean) => void; busy: boolean }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>swaps</CardTitle>
+        <CardDescription>a swap goes through once every admin approves. any admin can shut it down.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y rounded-lg border">
+          {swaps.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">
+                  {s.outLabel} <span className="text-muted-foreground">→</span> {s.inLabel}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {s.proposedBy} proposed
+                  {s.status === "pending"
+                    ? ` · approved by ${s.approvedBy.join(", ") || "nobody"}${s.waitingOn.length ? ` · waiting on ${s.waitingOn.join(", ")}` : ""}`
+                    : ` · ${s.status === "done" ? "swapped" : s.status}`}
+                </div>
+              </div>
+              {s.status === "pending" && s.canVote && (
+                <>
+                  <Button size="sm" disabled={busy} onClick={() => onVote(s.id, true)}>
+                    <CheckIcon /> approve
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => onVote(s.id, false)}>
+                    <XIcon /> reject
+                  </Button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -194,10 +300,12 @@ function loadSchedule(league: League, week?: number, st?: number): Promise<Sched
   return p;
 }
 
-function EspnBrowser({ added, onAdd, start }: {
+function EspnBrowser({ added, onAdd, start, title = "add games from espn", actionLabel = "add" }: {
   added: Set<string>;
   onAdd: (league: League, g: EspnGame, schedule: Schedule) => void;
   start: StartWeeks;
+  title?: string;
+  actionLabel?: string;
 }) {
   const tz = useTimeZone();
   const [league, setLeague] = useState<League>("nfl");
@@ -258,7 +366,7 @@ function EspnBrowser({ added, onAdd, start }: {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>add games from espn</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -355,11 +463,11 @@ function EspnBrowser({ added, onAdd, start }: {
                   ) : (
                     <Button
                       size="sm"
-                      className="w-16"
+                      className="min-w-16"
                       disabled={stale || !schedule}
                       onClick={() => schedule && onAdd(league, g, schedule)}
                     >
-                      <PlusIcon /> add
+                      <PlusIcon /> {actionLabel}
                     </Button>
                   )}
                 </li>
