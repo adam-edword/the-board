@@ -19,6 +19,9 @@ const MIN_LEAD_MS = 10 * 60_000;
 
 type OpenGame = {
   id: number;
+  week_id: number;
+  home_abbr: string;
+  away_abbr: string;
   league: "nfl" | "ncaaf";
   kickoff: string;
   home_name: string;
@@ -47,7 +50,7 @@ export async function runAiPlayer() {
   const now = Date.now();
   const { data: games } = await db
     .from("games")
-    .select("id, league, kickoff, home_name, home_rank, away_name, away_rank, network, featured")
+    .select("id, week_id, league, kickoff, home_name, home_abbr, home_rank, away_name, away_abbr, away_rank, network, featured")
     .eq("status", "pre")
     .gt("kickoff", new Date(now + MIN_LEAD_MS).toISOString())
     .order("kickoff");
@@ -85,8 +88,52 @@ export async function runAiPlayer() {
   if (rows.length) {
     const { error } = await db.from("picks").upsert(rows, { onConflict: "user_id,game_id", ignoreDuplicates: true });
     if (error) throw error;
+    // tell the group chat. a failed post shouldn't undo the picks.
+    try {
+      await postToDiscord(ai.name, rows, allowed, db);
+    } catch (e) {
+      console.error("ai player: discord post failed", e);
+    }
   }
   return { picked: rows.length, due: due.length };
+}
+
+// posts his picks to the group's discord channel (DISCORD_WEBHOOK_URL), one
+// line per game with his reason
+async function postToDiscord(
+  name: string,
+  rows: { game_id: number; side: "home" | "away"; reason: string | null }[],
+  games: Map<number, OpenGame>,
+  db: ReturnType<typeof createAdminClient>,
+) {
+  const url = process.env.DISCORD_WEBHOOK_URL;
+  if (!url) return;
+  const picked = rows
+    .map((r) => ({ r, g: games.get(r.game_id)! }))
+    .sort((a, b) => a.g.kickoff.localeCompare(b.g.kickoff));
+  const { data: week } = await db.from("weeks").select("label").eq("id", picked[0].g.week_id).maybeSingle();
+  const lines = picked.map(({ r, g }) => {
+    const [win, lose] = r.side === "home" ? [g.home_abbr, g.away_abbr] : [g.away_abbr, g.home_abbr];
+    return `**${win}** over ${lose}${g.featured ? " ⭐" : ""}${r.reason ? `\n${r.reason}` : ""}`;
+  });
+  const site = process.env.SITE_URL?.replace(/\/$/, "");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: name.toLowerCase(),
+      allowed_mentions: { parse: [] },
+      embeds: [
+        {
+          title: `${name.toLowerCase()}'s picks${week?.label ? ` for ${week.label}` : ""}`,
+          url: site || undefined,
+          description: lines.join("\n\n").slice(0, 4000),
+          color: 0xd97757,
+        },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`discord ${res.status}`);
 }
 
 // noon central on the wednesday on or before kickoff. that's when he picks.
