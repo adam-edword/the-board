@@ -14,6 +14,7 @@ import { seasonStats } from "@/lib/stats";
 import { syncScores } from "@/lib/sync";
 import { runAiPlayer } from "@/lib/ai-player";
 import { runSlatePicker } from "@/lib/slate-picker";
+import { runRecapPoster } from "@/lib/recap-poster";
 import { SlateReasons } from "@/components/slate-reasons";
 import { AiTakes } from "@/components/ai-takes";
 
@@ -37,8 +38,14 @@ export default async function BoardPage(props: PageProps<"/">) {
     } catch (e) {
       console.error("score sync failed", e);
     }
-    // tuesdays the commissioner posts the weekend's games, wednesdays the ai
-    // player picks them (both do nothing most loads)
+    // once a week wraps the bot posts its recap, tuesdays the commissioner
+    // posts the weekend's games, wednesdays the ai player picks them (all do
+    // nothing most loads)
+    try {
+      await runRecapPoster();
+    } catch (e) {
+      console.error("recap post failed", e);
+    }
     try {
       await runSlatePicker();
     } catch (e) {
