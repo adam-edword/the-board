@@ -2,10 +2,10 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 import { firstName } from "@/lib/format";
 
-// at 1pm central on each game day, the bot tags whoever still hasn't picked
-// that day's games in discord. if the day's first game starts before 3pm, it
-// goes 2 hours before kickoff instead so nobody misses the early games. one
-// post per day at most, and none if everyone's in.
+// once a week, at 1pm central on the day of the week's first game, the bot
+// tags whoever still has picks to make for the week in discord. if that first
+// game starts before 3pm, it goes 2 hours before kickoff instead. none if
+// everyone's in.
 const LEAD_MS = 2 * 3600_000;
 const REMIND_HOUR = 13;
 const TZ = "America/Chicago";
@@ -18,19 +18,22 @@ export async function runPickReminder() {
 
   const { data: upcoming } = await db
     .from("games")
-    .select("id, kickoff")
+    .select("id, kickoff, week_id")
     .eq("status", "pre")
     .gt("kickoff", new Date(now).toISOString())
     .order("kickoff");
   if (!upcoming?.length) return { skipped: "no games" };
 
-  // the next game day, in central time, and whether it's time to remind
-  const day = centralDate(upcoming[0].kickoff);
-  const firstKick = new Date(upcoming[0].kickoff).getTime();
+  // the week of the next game, and the day its first game is on
+  const weekId = upcoming[0].week_id;
+  const { data: weekGames } = await db.from("games").select("kickoff").eq("week_id", weekId).order("kickoff").limit(1);
+  const firstKick = new Date(weekGames?.[0]?.kickoff ?? upcoming[0].kickoff).getTime();
+  const day = centralDate(new Date(firstKick).toISOString());
   if (now < Math.min(centralAt(day, REMIND_HOUR), firstKick - LEAD_MS)) return { skipped: "not yet" };
-  const games = upcoming.filter((g) => centralDate(g.kickoff) === day);
+  // every game in the week that can still be picked
+  const games = upcoming.filter((g) => g.week_id === weekId);
 
-  // one reminder per day, even if two runs land at once
+  // one reminder per week (keyed by its first game day), even if two runs land at once
   const { data: claimed } = await db.from("pick_reminders").insert({ day }).select("day");
   if (!claimed?.length) return { skipped: "already reminded" };
 
@@ -50,7 +53,7 @@ export async function runPickReminder() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: "the board",
-      content: `games today, first one kicks off at ${timeLabel(firstKick)} central. you still have picks to make: ${tags.join(" ")}${site ? `\n${site}` : ""}`,
+      content: `first game of the week kicks off ${now < firstKick ? `at ${timeLabel(firstKick)} central` : "soon"}. you still have picks to make: ${tags.join(" ")}${site ? `\n${site}` : ""}`,
       allowed_mentions: { users: missing.flatMap((p) => (p.discord_id ? [p.discord_id] : [])) },
     }),
   });
