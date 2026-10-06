@@ -3,6 +3,7 @@ import { runAiPlayer } from "@/lib/ai-player";
 import { runSlatePicker } from "@/lib/slate-picker";
 import { runRecapPoster } from "@/lib/recap-poster";
 import { runPickReminder } from "@/lib/pick-reminder";
+import { runOutbox } from "@/lib/outbox";
 
 // trigger for a scheduled task: curl -H "Authorization: Bearer $CRON_SECRET" https://<site>/api/ai-player
 // posts finished weeks' recaps and pick reminders, then runs the commissioner
@@ -18,6 +19,10 @@ export async function GET(request: NextRequest) {
       console.error("recap post failed", e);
       return { error: "recap post failed" };
     });
+    const outbox = await runOutbox().catch((e) => {
+      console.error("outbox failed", e);
+      return { error: "outbox failed" };
+    });
     const reminder = await runPickReminder().catch((e) => {
       console.error("pick reminder failed", e);
       return { error: "pick reminder failed" };
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
       console.error("slate picker failed", e);
       return { error: "slate picker failed" };
     });
-    return NextResponse.json({ recap, reminder, slate, player: await runAiPlayer() });
+    return NextResponse.json({ recap, outbox, reminder, slate, player: await runAiPlayer() });
   } catch (e) {
     console.error("ai player failed", e);
     return NextResponse.json({ error: "ai player failed" }, { status: 500 });
