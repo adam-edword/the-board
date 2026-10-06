@@ -359,3 +359,15 @@ async function applyIfApproved(swapId: number) {
   }
   return true;
 }
+
+// ---------------------------------------------------------------- discord
+
+export async function setDiscordId(userId: string, discordId: string) {
+  await requireAdmin();
+  const v = discordId.trim();
+  if (v && !/^\d{15,21}$/.test(v)) return { error: "that doesn't look like a discord user id" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_discord_id", { uid: userId, did: v });
+  if (error) return { error: "couldn't save that" };
+  return { ok: true };
+}

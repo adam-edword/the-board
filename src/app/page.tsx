@@ -15,6 +15,7 @@ import { syncScores } from "@/lib/sync";
 import { runAiPlayer } from "@/lib/ai-player";
 import { runSlatePicker } from "@/lib/slate-picker";
 import { runRecapPoster } from "@/lib/recap-poster";
+import { runPickReminder } from "@/lib/pick-reminder";
 import { SlateReasons } from "@/components/slate-reasons";
 import { AiTakes } from "@/components/ai-takes";
 
@@ -45,6 +46,11 @@ export default async function BoardPage(props: PageProps<"/">) {
       await runRecapPoster();
     } catch (e) {
       console.error("recap post failed", e);
+    }
+    try {
+      await runPickReminder();
+    } catch (e) {
+      console.error("pick reminder failed", e);
     }
     try {
       await runSlatePicker();

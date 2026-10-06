@@ -28,11 +28,14 @@ export default async function AdminPage(props: PageProps<"/admin">) {
   const prevWeek = after && after.season === week?.season ? after : undefined;
 
   const supabase = await createClient();
-  const [{ data: profiles }, weekData, members] = await Promise.all([
+  const [{ data: profiles }, weekData, members, { data: discordIds }] = await Promise.all([
     supabase.from("profiles").select(PROFILE_COLUMNS).eq("is_bot", false).order("created_at"),
     week ? getWeekData(week.id) : null,
     getMembers(),
+    // admin-only, for tagging people in discord
+    supabase.rpc("admin_discord_ids"),
   ]);
+  const discord = Object.fromEntries(((discordIds ?? []) as { id: string; discord_id: string | null }[]).map((d) => [d.id, d.discord_id ?? ""]));
   const people = (profiles ?? []) as Profile[];
   const waiting = people.filter((p) => !p.approved).length;
 
@@ -90,7 +93,7 @@ export default async function AdminPage(props: PageProps<"/admin">) {
             ) : (
               noWeeks
             ),
-          people: <PeopleTab people={people} meId={me.id} />,
+          people: <PeopleTab people={people} meId={me.id} discord={discord} />,
           week: week ? (
             <Card className="max-w-xl">
               <CardHeader>

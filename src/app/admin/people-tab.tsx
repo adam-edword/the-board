@@ -1,16 +1,17 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { Profile } from "@/lib/types";
-import { setMember } from "@/app/actions";
+import { setDiscordId, setMember } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Change = { id: string; approved: boolean; is_admin: boolean };
 
-export function PeopleTab({ people, meId }: { people: Profile[]; meId: string }) {
+export function PeopleTab({ people, meId, discord }: { people: Profile[]; meId: string; discord: Record<string, string> }) {
   const [shown, change] = useOptimistic(people, (all: Profile[], c: Change) =>
     all.map((p) => (p.id === c.id ? { ...p, approved: c.approved, is_admin: c.is_admin } : p)),
   );
@@ -32,7 +33,10 @@ export function PeopleTab({ people, meId }: { people: Profile[]; meId: string })
     <Card className="max-w-3xl">
       <CardHeader>
         <CardTitle>people</CardTitle>
-        <CardDescription>anyone can sign in with google, but they can&apos;t see the board until you approve them.</CardDescription>
+        <CardDescription>
+          anyone can sign in with google, but they can&apos;t see the board until you approve them. add someone&apos;s
+          discord user id (developer mode on, right-click them, copy user id) so the bot can tag them when picks are due.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ul className="divide-y rounded-lg border">
@@ -58,10 +62,46 @@ export function PeopleTab({ people, meId }: { people: Profile[]; meId: string })
                   )}
                 </>
               )}
+              {p.approved && !p.is_ai && <DiscordField id={p.id} initial={discord[p.id] ?? ""} />}
             </li>
           ))}
         </ul>
       </CardContent>
     </Card>
+  );
+}
+
+// a person's discord user id, saved on blur or enter
+function DiscordField({ id, initial }: { id: string; initial: string }) {
+  const [value, setValue] = useState(initial);
+  const [saved, setSaved] = useState(initial);
+  const [pending, start] = useTransition();
+
+  function save() {
+    const v = value.trim();
+    if (v === saved) return;
+    if (v && !/^\d{15,21}$/.test(v)) return void toast.error("that doesn't look like a discord user id (it's all numbers)");
+    start(async () => {
+      const res = await setDiscordId(id, v);
+      if (res?.error) return void toast.error(res.error);
+      setSaved(v);
+      toast.success(v ? "discord id saved" : "discord id cleared");
+    });
+  }
+
+  return (
+    <div className="basis-full">
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => e.key === "Enter" && save()}
+        disabled={pending}
+        inputMode="numeric"
+        placeholder="discord user id"
+        aria-label="discord user id"
+        className="h-8 max-w-60 font-mono text-xs"
+      />
+    </div>
   );
 }
