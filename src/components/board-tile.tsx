@@ -221,7 +221,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
 // together once there are more people than roomy rows, and only past that does
 // the tile grow. the bottom row stays clear on the side where the coin landed.
 const ROW = 30; // roomy row height
-const MIN_ROW = 19; // how tight rows can squeeze before the tile grows
+const MIN_ROW = 24; // how tight rows can squeeze before the tile grows
 const ROWS = 6; // fixed height, in roomy rows
 
 function placeNames(gameId: number, side: Side, writers: Marker[], coinHere: boolean, roster: string[]) {
