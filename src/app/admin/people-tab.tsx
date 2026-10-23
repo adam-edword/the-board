@@ -3,7 +3,7 @@
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { Profile } from "@/lib/types";
-import { setDiscordId, setMember } from "@/app/actions";
+import { adminSetName, setDiscordId, setMember } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ export function PeopleTab({ people, meId, discord }: { people: Profile[]; meId: 
         <ul className="divide-y rounded-lg border">
           {sorted.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-              <span className="min-w-40 flex-1">{p.name}</span>
+              <span className="min-w-40 flex-1">{p.is_ai ? p.name : <NameField id={p.id} initial={p.name} />}</span>
               {!p.approved && <Badge className="bg-live/15 text-live">waiting</Badge>}
               {p.is_admin && <Badge variant="secondary">admin</Badge>}
               {p.id !== meId && (
@@ -103,5 +103,44 @@ function DiscordField({ id, initial }: { id: string; initial: string }) {
         className="h-8 max-w-60 font-mono text-xs"
       />
     </div>
+  );
+}
+
+// a person's name, editable in place. saved on blur or enter, escape undoes.
+function NameField({ id, initial }: { id: string; initial: string }) {
+  const [value, setValue] = useState(initial);
+  const [saved, setSaved] = useState(initial);
+  const [pending, start] = useTransition();
+
+  function save() {
+    const v = value.trim();
+    if (v === saved) return setValue(saved);
+    if (!v) return setValue(saved);
+    start(async () => {
+      const res = await adminSetName(id, v);
+      if (res?.error) {
+        setValue(saved);
+        return void toast.error(res.error);
+      }
+      setSaved(v);
+      setValue(v);
+      toast.success(`renamed to ${v}`);
+    });
+  }
+
+  return (
+    <Input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setValue(saved);
+      }}
+      disabled={pending}
+      maxLength={40}
+      aria-label="name"
+      className="h-8 max-w-60 border-transparent bg-transparent px-1 shadow-none hover:border-input focus-visible:border-input"
+    />
   );
 }

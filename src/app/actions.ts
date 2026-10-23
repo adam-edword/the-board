@@ -371,3 +371,15 @@ export async function setDiscordId(userId: string, discordId: string) {
   if (error) return { error: "couldn't save that" };
   return { ok: true };
 }
+
+// admins can rename anyone, e.g. to fix a nickname
+export async function adminSetName(userId: string, name: string) {
+  await requireAdmin();
+  const clean = name.trim();
+  if (!clean || clean.length > 40) return { error: "names are 1 to 40 characters" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_name", { uid: userId, new_name: clean });
+  if (error) return { error: "couldn't save that name" };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
