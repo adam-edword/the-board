@@ -149,24 +149,51 @@ const SYSTEM = `You're Claude, acting as commissioner for a group of friends' we
 
 Pick exactly ${CFB_GAMES} college games and ${NFL_GAMES} NFL games, and choose one of the college games as the featured game, worth double points.
 
-What makes a good board: games people will actually watch and argue about. Favor games that should be close (the line in the list is there only to help you judge that), ranked matchups, rivalries, and big-stage slots (primetime, national TV). Avoid obvious blowouts, even between big names. Spread it across the weekend where you can. The featured game should be the biggest college game of the week. You can search the web for storylines if it helps, but don't overthink it.
+What makes a good board, in this order of priority:
+1. College games where both teams are ranked. Take these first.
+2. Games where both teams have the same winning record (both 5-2, say). This counts for the NFL too.
+3. College games between power-conference teams (SEC, Big Ten, Big 12, ACC).
+After that, break ties with games that should be close (the line in the list is there only to help you judge that), rivalries, and big-stage slots (primetime, national TV). Each game in the list is tagged with which of these it meets. Avoid obvious blowouts, even between big names. The featured game should be the biggest college game of the week, usually the best ranked matchup. You can search the web for storylines if it helps, but don't overthink it.
 
 For each game, write one short sentence on why it's on the board, in your own voice: plain, a little dry, no hype, no emojis. Lowercase is fine. ${READ_ALOUD}
 
 When you're done, call submit_slate once.`;
 
+// espn conference ids for the power four
+const POWER: Record<string, string> = { "1": "ACC", "4": "Big 12", "5": "Big Ten", "8": "SEC" };
+
+// which of the group's priorities a game meets, best first (see SYSTEM)
+function priorities(g: EspnGame) {
+  const tags: string[] = [];
+  if (g.league === "ncaaf" && g.homeRank && g.awayRank) tags.push("both ranked");
+  const winning = (r: string | null) => {
+    const [w, l] = (r ?? "").split("-").map(Number);
+    return Number.isFinite(w) && Number.isFinite(l) && w > l;
+  };
+  if (g.homeRecord && g.homeRecord === g.awayRecord && winning(g.homeRecord)) tags.push(`same winning record (${g.homeRecord})`);
+  if (g.league === "ncaaf" && g.homeConf && g.awayConf && POWER[g.homeConf] && POWER[g.awayConf]) tags.push("power conference");
+  return tags;
+}
+
 function candidateList(games: Candidate[]) {
   const fmt = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" });
-  const team = (n: string, r: number | null) => (r ? `#${r} ${n}` : n);
+  const team = (n: string, r: number | null, rec: string | null, conf: string | null) =>
+    `${r ? `#${r} ` : ""}${n}${rec ? ` (${rec}${conf && POWER[conf] ? `, ${POWER[conf]}` : ""})` : ""}`;
+  // the games meeting the most important priorities go first
+  const weight = (g: EspnGame) => {
+    const t = priorities(g).join(" ");
+    return (t.includes("both ranked") ? 4 : 0) + (t.includes("same winning") ? 2 : 0) + (t.includes("power") ? 1 : 0);
+  };
   return games
-    .sort((a, b) => a.kickoff.localeCompare(b.kickoff))
+    .sort((a, b) => weight(b) - weight(a) || a.kickoff.localeCompare(b.kickoff))
     .map((g) =>
       [
-        `- ${g.id} (${g.league === "nfl" ? "NFL" : "college"}): ${team(g.awayName, g.awayRank)} at ${team(g.homeName, g.homeRank)}`,
+        `- ${g.id} (${g.league === "nfl" ? "NFL" : "college"}): ${team(g.awayName, g.awayRank, g.awayRecord, g.awayConf)} at ${team(g.homeName, g.homeRank, g.homeRecord, g.homeConf)}`,
         `${fmt.format(new Date(g.kickoff))} central`,
         g.network && `on ${g.network}`,
         g.line && `line ${g.line}`,
         g.note,
+        priorities(g).length ? `[${priorities(g).join("; ")}]` : null,
       ]
         .filter(Boolean)
         .join(", "),

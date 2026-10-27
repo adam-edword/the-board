@@ -31,6 +31,11 @@ export type EspnGame = {
   line: string | null;
   // espn's note on the game, like a rivalry name
   note: string | null;
+  // season records like "5-2", and espn conference ids (college only)
+  homeRecord: string | null;
+  awayRecord: string | null;
+  homeConf: string | null;
+  awayConf: string | null;
 };
 
 export type Schedule = {
@@ -41,6 +46,10 @@ export type Schedule = {
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+function record(c: any): string | null {
+  return c.records?.find((r: any) => r.type === "total")?.summary ?? c.records?.[0]?.summary ?? null;
+}
 
 function rank(c: any): number | null {
   // scoreboard uses curatedRank, the single-game summary uses rank
@@ -96,6 +105,10 @@ function parseCompetition(league: League, espnId: string, comp: any): EspnGame {
     network: comp.broadcasts?.[0]?.names?.[0] ?? comp.broadcasts?.[0]?.media?.shortName ?? null,
     line: comp.odds?.[0]?.details ?? null,
     note: comp.notes?.[0]?.headline ?? null,
+    homeRecord: record(home),
+    awayRecord: record(away),
+    homeConf: home.team?.conferenceId ?? null,
+    awayConf: away.team?.conferenceId ?? null,
   };
 }
 
