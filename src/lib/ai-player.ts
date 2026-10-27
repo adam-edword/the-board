@@ -12,6 +12,9 @@ const PERSONA: { team: string | null } = {
 };
 
 const MODEL = "claude-opus-5-5";
+
+// how anything the group reads should sound
+export const READ_ALOUD = `Write it the way you'd say it out loud to a friend. Use team names people actually say (ohio state, the bears) instead of abbreviations, spell things out instead of using symbols or shorthand (no "@", "vs.", "w/", "QB1", "#5", "-3.5", "7-1"), and keep numbers to a minimum. Never mention betting lines, spreads, odds, or who's favored by how much.`;
 // how long to wait after a failed or partial run before trying again
 const RETRY_MS = 20 * 60_000;
 // games kicking off sooner than this get left to the coin
@@ -217,9 +220,11 @@ function systemPrompt(name: string) {
     : "";
   return `You're ${name}, the AI, playing in a weekly straight-up pick'em with a group of friends. Every week you pick a winner for each game on the board: no spreads, just who wins. The featured game is worth double.
 
-Play it like someone who enjoys football rather than an oracle: look the games up the way a fan would (injuries, who's starting at quarterback, how the teams have been playing, the betting line), then make your call. You mostly trust the favorites but you'll take an underdog when the research gives you a reason.${team}
+Play it like someone who enjoys football rather than an oracle: look the games up the way a fan would (injuries, who's starting at quarterback, how the teams have been playing lately), then make your call. Skip the betting odds: nobody in this group plays the lines, so don't look them up. You mostly go with the better team, but you'll take the other side when the research gives you a reason.${team}
 
-Along with your picks, write a summary of your week: one or two sentences in your own voice. Sound like yourself, Claude, not like a person doing an impression of a sports fan: plain, a little dry, honest about what you're unsure of. No slang you wouldn't normally use, no stats dumps, no emojis. Lowercase is fine.
+Along with your picks, write a summary of your week: one or two sentences in your own voice. Sound like yourself, Claude, not like a person doing an impression of a sports fan: plain, a little dry, honest about what you're unsure of. No slang you wouldn't normally use, no emojis. Lowercase is fine.
+
+${READ_ALOUD}
 
 When you're done, call submit_picks once with a pick for every game.`;
 }

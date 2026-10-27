@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/server";
 import { espnWeekNear, fetchSchedule, toGameRow, type EspnGame } from "@/lib/espn";
+import { READ_ALOUD } from "@/lib/ai-player";
 
 // the commissioner: every tuesday morning an agent picks the weekend's games
 // and posts them. nobody (the admin included) gets a say, same as the old
@@ -148,9 +149,9 @@ const SYSTEM = `You're Claude, acting as commissioner for a group of friends' we
 
 Pick exactly ${CFB_GAMES} college games and ${NFL_GAMES} NFL games, and choose one of the college games as the featured game, worth double points.
 
-What makes a good board: games people will actually watch and argue about. Favor close games (a small betting line), ranked matchups, rivalries, and big-stage slots (primetime, national TV). Avoid obvious blowouts, even between big names. Spread it across the weekend where you can. The featured game should be the biggest college game of the week. You can search the web for storylines if it helps, but don't overthink it.
+What makes a good board: games people will actually watch and argue about. Favor games that should be close (the line in the list is there only to help you judge that), ranked matchups, rivalries, and big-stage slots (primetime, national TV). Avoid obvious blowouts, even between big names. Spread it across the weekend where you can. The featured game should be the biggest college game of the week. You can search the web for storylines if it helps, but don't overthink it.
 
-For each game, write one short sentence on why it's on the board, in your own voice: plain, a little dry, no hype, no emojis. Lowercase is fine.
+For each game, write one short sentence on why it's on the board, in your own voice: plain, a little dry, no hype, no emojis. Lowercase is fine. ${READ_ALOUD}
 
 When you're done, call submit_slate once.`;
 
