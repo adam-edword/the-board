@@ -11,13 +11,12 @@ function fmt(ms: number) {
   const d = Math.floor(m / 1440);
   const h = Math.floor((m % 1440) / 60);
   const min = m % 60;
-  const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  if (d > 0) return `${unit(d, "day")} ${unit(h, "hour")}`;
-  if (h > 0) return `${unit(h, "hour")} ${unit(min, "minute")}`;
-  return unit(min, "minute");
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${min}m`;
+  return `${min}m`;
 }
 
-// "next lock in 2 hours 14 minutes · BUF at KC", ticking down. gets loud if you haven't
+// "next lock in 2h 14m · BUF at KC", ticking down. gets loud if you haven't
 // picked that game yet.
 export function LockCountdown({ games }: { games: Upcoming[] }) {
   // start empty and fill in on the client, so server and browser clocks can't

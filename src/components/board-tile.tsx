@@ -207,7 +207,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
           )}
           {/* kicked off, no more picks */}
           {locked && !final && <LockIcon className="size-3" />}
-          {locked ? (g.league === "nfl" ? "nfl" : "cfb") : `${count} of ${total} in`}
+          {locked ? (g.league === "nfl" ? "nfl" : "cfb") : `${count}/${total} in`}
         </span>
       </div>}
     </Card>
