@@ -152,7 +152,7 @@ Pick exactly ${CFB_GAMES} college games and ${NFL_GAMES} NFL games, and choose o
 What makes a good board, in this order of priority:
 1. College games where both teams are ranked. Take these first.
 2. Games where both teams have the same winning record (both 5-2, say). This counts for the NFL too.
-3. College games between power-conference teams (SEC, Big Ten, Big 12, ACC).
+3. College games between power-conference teams (SEC, Big Ten, Big 12, ACC), and NFL division games.
 After that, break ties with games that should be close (the line in the list is there only to help you judge that), rivalries, and big-stage slots (primetime, national TV). Each game in the list is tagged with which of these it meets. Avoid obvious blowouts, even between big names. The featured game should be the biggest college game of the week, usually the best ranked matchup. You can search the web for storylines if it helps, but don't overthink it.
 
 For each game, write one short sentence on why it's on the board, in your own voice: plain, a little dry, no hype, no emojis. Lowercase is fine. ${READ_ALOUD}
@@ -161,6 +161,20 @@ When you're done, call submit_slate once.`;
 
 // espn conference ids for the power four
 const POWER: Record<string, string> = { "1": "ACC", "4": "Big 12", "5": "Big Ten", "8": "SEC" };
+
+// nfl divisions by espn abbreviation (espn doesn't flag division games)
+const NFL_DIVISIONS: Record<string, string> = Object.fromEntries(
+  Object.entries({
+    "AFC East": ["BUF", "MIA", "NE", "NYJ"],
+    "AFC North": ["BAL", "CIN", "CLE", "PIT"],
+    "AFC South": ["HOU", "IND", "JAX", "TEN"],
+    "AFC West": ["DEN", "KC", "LV", "LAC"],
+    "NFC East": ["DAL", "NYG", "PHI", "WSH"],
+    "NFC North": ["CHI", "DET", "GB", "MIN"],
+    "NFC South": ["ATL", "CAR", "NO", "TB"],
+    "NFC West": ["ARI", "LAR", "SF", "SEA"],
+  }).flatMap(([division, teams]) => teams.map((t) => [t, division])),
+);
 
 // which of the group's priorities a game meets, best first (see SYSTEM)
 function priorities(g: EspnGame) {
@@ -172,6 +186,8 @@ function priorities(g: EspnGame) {
   };
   if (g.homeRecord && g.homeRecord === g.awayRecord && winning(g.homeRecord)) tags.push(`same winning record (${g.homeRecord})`);
   if (g.league === "ncaaf" && g.homeConf && g.awayConf && POWER[g.homeConf] && POWER[g.awayConf]) tags.push("power conference");
+  const division = NFL_DIVISIONS[g.homeAbbr];
+  if (g.league === "nfl" && division && division === NFL_DIVISIONS[g.awayAbbr]) tags.push(`division game (${division})`);
   return tags;
 }
 
@@ -182,7 +198,7 @@ function candidateList(games: Candidate[]) {
   // the games meeting the most important priorities go first
   const weight = (g: EspnGame) => {
     const t = priorities(g).join(" ");
-    return (t.includes("both ranked") ? 4 : 0) + (t.includes("same winning") ? 2 : 0) + (t.includes("power") ? 1 : 0);
+    return (t.includes("both ranked") ? 4 : 0) + (t.includes("same winning") ? 2 : 0) + (t.includes("power") || t.includes("division") ? 1 : 0);
   };
   return games
     .sort((a, b) => weight(b) - weight(a) || a.kickoff.localeCompare(b.kickoff))
