@@ -264,8 +264,8 @@ export async function proposeSwap(weekId: number, outGameId: number, league: Lea
   const { data: dupe } = await supabase.from("games").select("id").eq("week_id", weekId).eq("espn_id", espnId).maybeSingle();
   if (dupe) return { error: "that game is already on the board" };
 
-  const outLabel = `${out.away_abbr} @ ${out.home_abbr}`;
-  const inLabel = `${g.awayAbbr} @ ${g.homeAbbr}`;
+  const outLabel = `${out.away_abbr} at ${out.home_abbr}`;
+  const inLabel = `${g.awayAbbr} at ${g.homeAbbr}`;
   const { data: swap, error } = await supabase
     .from("slate_swaps")
     .insert({
@@ -338,7 +338,7 @@ export async function proposeFeatureMove(weekId: number, gameId: number) {
   if (isLocked(target)) return { error: "that game already kicked off" };
   if (current && isLocked(current)) return { error: "the 2x game already kicked off" };
 
-  const label = (g: { away_abbr: string; home_abbr: string }) => `${g.away_abbr} @ ${g.home_abbr}`;
+  const label = (g: { away_abbr: string; home_abbr: string }) => `${g.away_abbr} at ${g.home_abbr}`;
   const { data: swap, error } = await supabase
     .from("slate_swaps")
     .insert({

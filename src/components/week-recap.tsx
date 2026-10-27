@@ -29,7 +29,7 @@ export function WeekRecap({ label, games, picks, adjustments, members }: {
             <TrophyIcon className="size-4 shrink-0 translate-y-0.5 text-live" />
             <span>
               <Names list={winners} /> {winners.length > 1 ? "tied for the week" : "won the week"} with{" "}
-              <b className="font-mono">{top}</b> pts
+              <b className="font-mono">{top}</b> points
             </span>
           </p>
         )}

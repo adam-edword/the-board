@@ -94,7 +94,7 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
                   </span>
                 </span>
               ))}{" "}
-              <span className="text-muted-foreground">with {banner.points} pts</span>
+              <span className="text-muted-foreground">with {banner.points} points</span>
             </div>
           </div>
         </Card>
@@ -106,12 +106,12 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
             <TableRow>
               <TableHead className="w-8">#</TableHead>
               <TableHead>name</TableHead>
-              <TableHead className="text-right">pts</TableHead>
+              <TableHead className="text-right">points</TableHead>
               <TableHead className="text-right">right</TableHead>
               <TableHead className="text-right">wrong</TableHead>
               <TableHead className="text-right">%</TableHead>
               <TableHead className="text-right" title="finished weeks won (ties count for everyone tied)">
-                wk wins
+                week wins
               </TableHead>
               {hasCoin && (
                 <TableHead className="text-right" title="finished weeks where they outscored the coin">
@@ -119,7 +119,7 @@ export default async function StandingsPage(props: PageProps<"/standings">) {
                 </TableHead>
               )}
               <TableHead className="text-right" title="points from their own picks, without anything the coin gave them">
-                true pts
+                true points
               </TableHead>
             </TableRow>
           </TableHeader>

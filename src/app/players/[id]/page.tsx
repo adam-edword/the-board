@@ -39,13 +39,13 @@ export default async function PlayerPage(props: PageProps<"/players/[id]">) {
 
   const tiles: { label: string; value: string; sub?: string }[] = [
     { label: "points", value: `${s.points}${s.edited ? "*" : ""}`, sub: `#${rank} of ${members.length}` },
-    { label: "pick %", value: pct(s.correct, s.decided), sub: `${s.correct}–${s.decided - s.correct}` },
+    { label: "pick rate", value: pct(s.correct, s.decided), sub: `${s.correct}–${s.decided - s.correct}` },
     { label: "weeks won", value: player.is_bot ? "–" : String(s.weekWins) },
     { label: "featured games", value: s.featured.total ? `${s.featured.hit}/${s.featured.total}` : "–", sub: "tracked picks" },
   ];
   if (!player.is_bot) {
     tiles.push({
-      label: "vs the coin",
+      label: "against the coin",
       value: `${s.vsCoin.w}–${s.vsCoin.l}${s.vsCoin.t ? `–${s.vsCoin.t}` : ""}`,
       sub: "finished weeks",
     });

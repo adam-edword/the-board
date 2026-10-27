@@ -103,7 +103,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
   }
 
   function proposeStar(g: Game) {
-    if (!window.confirm(`propose making ${g.away_abbr} @ ${g.home_abbr} the 2x game? every admin has to approve.`)) return;
+    if (!window.confirm(`propose making ${g.away_abbr} at ${g.home_abbr} the 2x game? every admin has to approve.`)) return;
     startSwap(async () => {
       try {
         const res = await proposeFeatureMove(weekId, g.id);
@@ -143,7 +143,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
     run(
       { type: "add", game: draftGame(weekId, league, e) },
       () => addGame(weekId, league, e.espnId, schedule.week, schedule.seasonType),
-      `couldn't add ${e.awayAbbr} @ ${e.homeAbbr}`,
+      `couldn't add ${e.awayAbbr} at ${e.homeAbbr}`,
     );
 
   return (
@@ -157,7 +157,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
           <CardDescription>
             {locked
               ? "the commissioner picked these, so they're locked. swapping a game or moving the 2x (tap a star) takes every admin's approval."
-              : "star one as the featured game (worth 2 pts)."}
+              : "star one as the featured game (worth double points)."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -175,7 +175,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
                       <div className="flex items-center gap-1.5 font-medium">
                         <TeamLogo src={g.away_logo} size={18} />
                         {g.away_abbr}
-                        <span className="text-muted-foreground">@</span>
+                        <span className="text-muted-foreground">at</span>
                         <TeamLogo src={g.home_logo} size={18} />
                         {g.home_abbr}
                       </div>
@@ -233,7 +233,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
                         aria-label="remove game"
                         disabled={saving}
                         onClick={() =>
-                          run({ type: "remove", id: g.id }, () => removeGame(g.id), `couldn't remove ${g.away_abbr} @ ${g.home_abbr}`)
+                          run({ type: "remove", id: g.id }, () => removeGame(g.id), `couldn't remove ${g.away_abbr} at ${g.home_abbr}`)
                         }
                       >
                         <XIcon />
@@ -256,7 +256,7 @@ export function GamesWorkspace({ weekId, label, games: serverGames, start, locke
           added={new Set(games.map((g) => g.espn_id))}
           onAdd={propose}
           start={start}
-          title={`swap out ${swapOut.away_abbr} @ ${swapOut.home_abbr} for…`}
+          title={`swap out ${swapOut.away_abbr} at ${swapOut.home_abbr} for…`}
           actionLabel="swap in"
         />
       )}
@@ -426,7 +426,7 @@ function EspnBrowser({ added, onAdd, start, title = "add games from espn", actio
                 <ChevronLeftIcon />
               </Button>
               <span className="min-w-20 text-center tabular-nums">
-                {schedule.seasonType === 3 ? "playoffs " : "espn "}wk {schedule.week}
+                {schedule.seasonType === 3 ? "playoffs " : "espn "}week {schedule.week}
               </span>
               <Button
                 size="icon-sm"

@@ -62,7 +62,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
               !r.bot && r.total === best && best > 0 && "border-win/50 bg-win/10 text-win",
               r.id === meId && !(!r.bot && r.total === best && best > 0) && "border-foreground/30",
             )}
-            title={`${r.total} pts this season, ${r.week} this week`}
+            title={`${r.total} points this season, ${r.week} this week`}
           >
             {r.bot ? <CoinIcon /> : <span className="font-mono text-[10px] opacity-60">{rankOf(r.total)}</span>}
             {r.name}

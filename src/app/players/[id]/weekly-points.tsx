@@ -20,7 +20,7 @@ export function WeeklyPoints({ weeks, color }: { weeks: Line[]; color: string })
             <span className="text-muted-foreground">{active.label}:</span>{" "}
             {active.played ? (
               <>
-                <b className="font-mono">{active.points}</b> pts
+                <b className="font-mono">{active.points}</b> points
                 {active.won && " · won the week"}
                 {active.coin !== null && active.done && <span className="text-muted-foreground"> · coin had {active.coin}</span>}
                 {!active.done && <span className="text-muted-foreground"> · in progress</span>}

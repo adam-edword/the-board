@@ -17,7 +17,7 @@ export function SlateReasons({ games }: { games: Game[] }) {
         {why.map((g) => (
           <li key={g.id}>
             <span className="font-semibold">
-              {g.away_abbr} @ {g.home_abbr}
+              {g.away_abbr} at {g.home_abbr}
             </span>
             {g.featured && <StarIcon className="ml-1 inline size-3 fill-live text-live" />}
             <span className="text-muted-foreground"> · {g.slate_reason}</span>

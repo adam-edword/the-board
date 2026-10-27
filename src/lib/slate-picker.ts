@@ -271,7 +271,7 @@ async function postToDiscord(
   if (!url) return;
   const lines = [...rows]
     .sort((a, b) => a.kickoff.localeCompare(b.kickoff))
-    .map((r) => `**${r.away_abbr} @ ${r.home_abbr}**${r.featured ? " ⭐ 2x" : ""}${r.slate_reason ? `\n${r.slate_reason}` : ""}`);
+    .map((r) => `**${r.away_abbr} at ${r.home_abbr}**${r.featured ? " ⭐ 2x" : ""}${r.slate_reason ? `\n${r.slate_reason}` : ""}`);
   const site = process.env.SITE_URL?.replace(/\/$/, "");
   const res = await fetch(url, {
     method: "POST",

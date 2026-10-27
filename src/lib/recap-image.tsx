@@ -77,7 +77,7 @@ export async function renderRecapPng(label: string, recap: Recap) {
   const rows: { icon: React.ReactNode; muted?: boolean; parts: React.ReactNode[] }[] = [];
   const { winners, top, losers, bottom, featured, upset, coin } = recap;
   if (winners.length)
-    rows.push({ icon: icons.trophy, parts: [...names(winners), ` ${winners.length > 1 ? "tied for the week" : "won the week"} with `, bold(top), " pts"] });
+    rows.push({ icon: icons.trophy, parts: [...names(winners), ` ${winners.length > 1 ? "tied for the week" : "won the week"} with `, bold(top), " points"] });
   if (losers.length) rows.push({ icon: icons.down, muted: true, parts: [...names(losers), " brought up the rear with ", bold(bottom)] });
   if (featured)
     rows.push({

@@ -122,7 +122,7 @@ export default async function BoardPage(props: PageProps<"/">) {
             games={openGames.map((g) => ({
               id: g.id,
               kickoff: g.kickoff,
-              label: `${g.away_abbr} @ ${g.home_abbr}`,
+              label: `${g.away_abbr} at ${g.home_abbr}`,
               picked: mine.has(g.id),
             }))}
           />
