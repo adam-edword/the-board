@@ -22,7 +22,7 @@ async function getSwaps(weekId: number): Promise<SwapView[]> {
     getMe(),
     supabase
       .from("slate_swaps")
-      .select("id, out_label, in_label, status, in_kickoff, proposed_by, slate_swap_votes(admin_id, approve)")
+      .select("id, kind, out_label, in_label, status, in_kickoff, proposed_by, slate_swap_votes(admin_id, approve)")
       .eq("week_id", weekId)
       .order("created_at", { ascending: false })
       .limit(8),
@@ -31,9 +31,10 @@ async function getSwaps(weekId: number): Promise<SwapView[]> {
   const name = (id: string) => (admins ?? []).find((a) => a.id === id)?.name.toLowerCase() ?? "someone";
   return (swaps ?? []).map((s) => {
     const votes = (s.slate_swap_votes ?? []) as { admin_id: string; approve: boolean }[];
-    const expired = s.status === "pending" && new Date(s.in_kickoff).getTime() <= Date.now();
+    const expired = s.status === "pending" && !!s.in_kickoff && new Date(s.in_kickoff).getTime() <= Date.now();
     return {
       id: s.id,
+      kind: s.kind as SwapView["kind"],
       outLabel: s.out_label,
       inLabel: s.in_label,
       status: expired ? "expired" : (s.status as SwapView["status"]),

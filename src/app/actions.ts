@@ -326,6 +326,49 @@ export async function voteSwap(swapId: number, approve: boolean) {
   return { ok: true, applied };
 }
 
+// moving the 2x to another game already on the board, same approval rule
+export async function proposeFeatureMove(weekId: number, gameId: number) {
+  const me = await requireAdmin();
+  const supabase = await createClient();
+  const { data: games } = await supabase.from("games").select("id, kickoff, status, featured, away_abbr, home_abbr").eq("week_id", weekId);
+  const target = games?.find((g) => g.id === gameId);
+  const current = games?.find((g) => g.featured);
+  if (!target) return { error: "that game isn't on this week" };
+  if (target.featured) return { error: "that's already the 2x game" };
+  if (isLocked(target)) return { error: "that game already kicked off" };
+  if (current && isLocked(current)) return { error: "the 2x game already kicked off" };
+
+  const label = (g: { away_abbr: string; home_abbr: string }) => `${g.away_abbr} @ ${g.home_abbr}`;
+  const { data: swap, error } = await supabase
+    .from("slate_swaps")
+    .insert({
+      week_id: weekId,
+      kind: "feature",
+      out_game_id: current?.id ?? null,
+      out_label: current ? label(current) : "",
+      feature_game_id: target.id,
+      in_label: label(target),
+      proposed_by: me.id,
+    })
+    .select("id")
+    .single();
+  if (error) return { error: error.code === "23505" ? "there's already a pending change for the 2x game" : "couldn't propose that" };
+  await supabase.from("slate_swap_votes").insert({ swap_id: swap.id, admin_id: me.id, approve: true });
+
+  try {
+    await postToDiscord({
+      username: "the board",
+      title: "2x move proposed",
+      description: `${me.name.toLowerCase()} wants to make **${label(target)}** the 2x game${current ? ` instead of **${label(current)}**` : ""}. it only happens if every admin approves.`,
+    });
+  } catch (e) {
+    console.error("swap discord post failed", e);
+  }
+  const applied = await applyIfApproved(swap.id);
+  revalidatePath("/", "layout");
+  return { ok: true, applied };
+}
+
 // once every admin has approved, pull fresh details from espn and swap it in
 async function applyIfApproved(swapId: number) {
   const supabase = await createClient();
@@ -337,6 +380,23 @@ async function applyIfApproved(swapId: number) {
   if (!swap || swap.status !== "pending") return false;
   const yes = new Set((votes ?? []).filter((v) => v.approve).map((v) => v.admin_id));
   if (!(admins ?? []).every((a) => yes.has(a.id))) return false;
+
+  if (swap.kind === "feature") {
+    const { error } = await supabase.rpc("apply_slate_swap", { sid: swapId, game: null });
+    if (error) throw error;
+    const { data: after } = await supabase.from("slate_swaps").select("status").eq("id", swapId).single();
+    if (after?.status !== "done") return false;
+    try {
+      await postToDiscord({
+        username: "the board",
+        title: "2x moved",
+        description: `every admin signed off: the 2x is now **${swap.in_label}**${swap.out_label ? ` (was ${swap.out_label})` : ""}.`,
+      });
+    } catch (e) {
+      console.error("swap discord post failed", e);
+    }
+    return true;
+  }
 
   const schedule = await fetchSchedule(swap.in_league as League, { week: swap.espn_week, seasonType: swap.espn_season_type });
   const g = schedule.games.find((x) => x.espnId === swap.in_espn_id);
