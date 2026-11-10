@@ -86,8 +86,19 @@ export default async function BoardPage(props: PageProps<"/">) {
     getSeasonData(week.season),
     getAiSummary(week.id),
   ]);
-  // season totals for the standings strip above the board
-  const stats = seasonStats(season.weeks, season.games, season.picks, season.adjustments, members);
+  // season totals for the standings strip above the board, as they stood
+  // through the week being viewed (so older weeks show the standings back then)
+  const throughIdx = season.weeks.findIndex((w) => w.id === week.id);
+  const through = new Set((throughIdx >= 0 ? season.weeks.slice(0, throughIdx + 1) : season.weeks).map((w) => w.id));
+  const gamesThrough = season.games.filter((g) => through.has(g.week_id));
+  const gameIds = new Set(gamesThrough.map((g) => g.id));
+  const stats = seasonStats(
+    season.weeks.filter((w) => through.has(w.id)),
+    gamesThrough,
+    season.picks.filter((p) => gameIds.has(p.game_id)),
+    season.adjustments.filter((a) => through.has(a.week_id)),
+    members,
+  );
   const seasonTotals = Object.fromEntries(members.map((m) => [m.id, { points: stats.get(m.id)?.points ?? 0, edited: !!stats.get(m.id)?.edited }]));
 
   const mine = new Map(picks.filter((p) => p.user_id === me.id).map((p) => [p.game_id, p.side]));
