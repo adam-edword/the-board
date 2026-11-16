@@ -165,7 +165,7 @@ export function BoardTile({ game: g, others, mySide, me, pickedCount, total, ros
                           {m.name}
                           {m.edited && <span title="edited by the admin">*</span>}
                           {m.auto && (
-                            <span title="missed this one, the coin picked for them">
+                            <span title="missed this one, a coin flip picked for them">
                               <CoinIcon className="ml-1 size-[0.75em] align-[0.05em]" />
                             </span>
                           )}
