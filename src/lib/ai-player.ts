@@ -3,7 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // the ai player: a regular member of the board whose picks come from claude.
-// once a week (wednesday, like a normal guy filling out his picks) he looks
+// once a week (the morning of the week's first game, after admins have had
+// their chance to swap games) he looks
 // up each game, makes his picks, and sums up his week in a sentence or two.
 
 // who he is. his name and marker live on his profile.
@@ -38,8 +39,9 @@ type OpenGame = {
 type AiPick = { game_id: number; side: "home" | "away" };
 
 /**
- * makes the ai player's picks for any game that's due. a game is due from
- * noon central on the wednesday of its week until shortly before kickoff.
+ * makes the ai player's picks for any game that's due. a week's games are due
+ * from 9am central on the day of its first game (or 90 minutes before that
+ * first kickoff, if earlier) until shortly before each kickoff.
  * safe to call on every page load: it bails early when nothing is due, and
  * only one attempt runs every 20 minutes.
  */
@@ -64,10 +66,21 @@ export async function runAiPlayer() {
   const { data: state } = await db.from("sync_state").select("ai_pick_now").eq("id", 1).single();
   const early = !!state?.ai_pick_now;
   const weekOut = now + 7 * 86_400_000;
+  // when each week's picks are due, from its first game (started ones included)
+  const weekIds = [...new Set(((games ?? []) as OpenGame[]).map((g) => g.week_id))];
+  const { data: weekGames } = weekIds.length
+    ? await db.from("games").select("week_id, kickoff").in("week_id", weekIds)
+    : { data: [] as { week_id: number; kickoff: string }[] };
+  const firstKick = new Map<number, number>();
+  for (const g of weekGames ?? []) {
+    const t = new Date(g.kickoff).getTime();
+    if (!firstKick.has(g.week_id) || t < firstKick.get(g.week_id)!) firstKick.set(g.week_id, t);
+  }
   const due = ((games ?? []) as OpenGame[]).filter(
     (g) =>
       !picked.has(g.id) &&
-      (now >= pickDay(new Date(g.kickoff)).getTime() || (early && new Date(g.kickoff).getTime() <= weekOut)),
+      (now >= pickTime(firstKick.get(g.week_id) ?? new Date(g.kickoff).getTime()) ||
+        (early && new Date(g.kickoff).getTime() <= weekOut)),
   );
   if (!due.length) return { skipped: "nothing due" };
 
@@ -154,22 +167,19 @@ async function postToDiscord(
   if (!res.ok) throw new Error(`discord ${res.status}`);
 }
 
-// noon central on the wednesday on or before kickoff. that's when he picks.
-function pickDay(kickoff: Date) {
+// 9am central on the day of a week's first game, or 90 minutes before that
+// kickoff if it's earlier. that's when he picks.
+function pickTime(firstKick: number) {
   const tz = "America/Chicago";
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" })
-      .formatToParts(kickoff)
+    new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" })
+      .formatToParts(new Date(firstKick))
       .map((p) => [p.type, p.value]),
   );
-  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
-  const back = (weekday - 3 + 7) % 7;
-  // wall-clock noon that day in utc, then shift by central's offset at that moment
-  const noonUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - back, 12);
-  const offset = centralOffsetMs(new Date(noonUtc), tz);
-  const at = new Date(noonUtc - offset);
-  // a wednesday game before noon picks the week before
-  return at.getTime() > kickoff.getTime() ? new Date(at.getTime() - 7 * 86_400_000) : at;
+  // wall-clock 9am that day in utc, then shift by central's offset at that moment
+  const nineUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), 9);
+  const nine = nineUtc - centralOffsetMs(new Date(nineUtc), tz);
+  return Math.min(nine, firstKick - 90 * 60_000);
 }
 
 // how far the zone is from utc at a moment (negative for central)
@@ -261,7 +271,8 @@ async function askClaude(name: string, games: OpenGame[]): Promise<{ picks: AiPi
       thinking: { type: "adaptive" },
       output_config: { effort: "medium" },
       system: systemPrompt(name),
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 25 }, SUBMIT_PICKS],
+      // about two searches a game, so a late swap doesn't cost a full week's research
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: Math.min(20, 2 * games.length + 2) }, SUBMIT_PICKS],
       messages,
     });
     const message = await stream.finalMessage();
