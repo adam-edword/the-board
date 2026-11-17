@@ -72,7 +72,13 @@ export async function runSlatePicker() {
     .map((g) => ({ ...g, id: g.espnId }));
   const cfbCount = candidates.filter((g) => g.league === "ncaaf").length;
   const nflCount = candidates.filter((g) => g.league === "nfl").length;
-  if (cfbCount < CFB_GAMES || nflCount < NFL_GAMES) return { skipped: "not enough games on espn" };
+  if (cfbCount < CFB_GAMES || nflCount < NFL_GAMES) {
+    // say what espn gave us, so a bad lookup is easy to spot in the logs
+    return {
+      skipped: "not enough games on espn",
+      detail: { cfbWeek, nflWeek, cfbGames: cfb?.games.length ?? 0, nflGames: nfl?.games.length ?? 0, cfbCount, nflCount, from, to },
+    };
+  }
 
   const slate = await askClaude(candidates);
   const byId = new Map(candidates.map((g) => [g.id, g]));

@@ -162,7 +162,7 @@ async function espnWeekOn(league: League, at: Date): Promise<{ week: number; sea
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(at).replaceAll("-", "");
   const params = new URLSearchParams({ dates: day, limit: "1" });
   if (league === "ncaaf") params.set("groups", "80");
-  const res = await fetch(`${BASE}/${SPORT_PATH[league]}/scoreboard?${params}`, { next: { revalidate: 3600 } });
+  const res = await fetch(`${BASE}/${SPORT_PATH[league]}/scoreboard?${params}`, { cache: "no-store" });
   if (!res.ok) return null;
   const data = await res.json();
   const week = data.week?.number;
