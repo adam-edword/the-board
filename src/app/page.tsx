@@ -170,8 +170,8 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 // the rule in fill_missed_picks (migration 0036): if you made none of your own
 // picks last week, the coin won't cover you this week. same exemptions: first
-// week of the season, new members, and anything before week 12 of 2026.
-const COIN_RULE_START = new Date("2026-11-25T00:00:00Z").getTime();
+// week of the season, new members, and misses before week 11 of 2026.
+const COIN_RULE_START = new Date("2026-11-18T00:00:00Z").getTime();
 function coinlessThisWeek(season: Awaited<ReturnType<typeof getSeasonData>>, idx: number, members: Profile[]) {
   const prev = idx > 0 ? season.weeks[idx - 1] : null;
   if (!prev) return [];
