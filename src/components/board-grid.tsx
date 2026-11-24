@@ -4,10 +4,10 @@ import { firstName, pickIsRight, pointsFor } from "@/lib/format";
 import type { Adjustment, Game, Pick, Profile, Side } from "@/lib/types";
 import type { Marker } from "@/lib/markers";
 import { BoardTile } from "./board-tile";
-import { CoinIcon } from "./coin-icon";
+import { CoinIcon, NoCoinIcon } from "./coin-icon";
 
 // the whiteboard: one tile per game, names written under the side they took
-export function BoardGrid({ games, members, picks, picked, meId, adjustments = [], seasonTotals }: {
+export function BoardGrid({ games, members, picks, picked, meId, adjustments = [], seasonTotals, noCoin = [] }: {
   games: Game[];
   members: Profile[];
   picks: Pick[];
@@ -16,6 +16,8 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
   adjustments?: Adjustment[];
   // season points per person, for the standings strip
   seasonTotals: Record<string, { points: number; edited: boolean }>;
+  // people the coin won't cover this week (they missed all of last week)
+  noCoin?: string[];
 }) {
   const names = new Map(members.map((m) => [m.id, firstName(m.name).toLowerCase()]));
   const markers = new Map<string, Marker>(
@@ -62,7 +64,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
               !r.bot && r.total === best && best > 0 && "border-win/50 bg-win/10 text-win",
               r.id === meId && !(!r.bot && r.total === best && best > 0) && "border-foreground/30",
             )}
-            title={`${r.total} points this season, ${r.week} this week`}
+            title={`${r.total} points this season, ${r.week} this week${noCoin.includes(r.id) ? ". no coin flip this week, missed all of last week" : ""}`}
           >
             {r.bot ? <CoinIcon /> : <span className="font-mono text-[10px] opacity-60">{rankOf(r.total)}</span>}
             {r.name}
@@ -71,6 +73,7 @@ export function BoardGrid({ games, members, picks, picked, meId, adjustments = [
               {r.edited && <span title="includes an admin edit">*</span>}
             </span>
             {r.week > 0 && <span className="font-mono text-[10px] opacity-60">+{r.week}</span>}
+            {noCoin.includes(r.id) && <NoCoinIcon className="size-[1.25em]" />}
           </Link>
         ))}
       </div>

@@ -12,6 +12,7 @@ export type Profile = {
   approved: boolean;
   marker_color: MarkerColor;
   marker_font: MarkerFont;
+  created_at?: string;
 };
 
 // auto_slate: the commissioner agent picked its games (lib/slate-picker.ts),

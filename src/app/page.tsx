@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { firstName, isLocked } from "@/lib/format";
 import { getAiSummary, getMe, getMembers, getSeasonData, getWeekData, getWeeks } from "@/lib/data";
+import type { Profile } from "@/lib/types";
 import { seasonStats } from "@/lib/stats";
 import { syncScores } from "@/lib/sync";
 import { runAiPlayer } from "@/lib/ai-player";
@@ -99,6 +100,7 @@ export default async function BoardPage(props: PageProps<"/">) {
     season.adjustments.filter((a) => through.has(a.week_id)),
     members,
   );
+  const noCoin = coinlessThisWeek(season, throughIdx, members);
   const seasonTotals = Object.fromEntries(members.map((m) => [m.id, { points: stats.get(m.id)?.points ?? 0, edited: !!stats.get(m.id)?.edited }]));
 
   const mine = new Map(picks.filter((p) => p.user_id === me.id).map((p) => [p.game_id, p.side]));
@@ -147,7 +149,7 @@ export default async function BoardPage(props: PageProps<"/">) {
         <>
           <WeekRecap label={week.label} games={games} picks={picks} adjustments={adjustments} members={members} />
           <SlateReasons games={games} />
-          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} seasonTotals={seasonTotals} />
+          <BoardGrid games={games} members={members} picks={picks} picked={picked} meId={me.id} adjustments={adjustments} seasonTotals={seasonTotals} noCoin={noCoin} />
           <AiTakes summary={aiSummary} members={members} />
           <p className="text-center text-xs text-muted-foreground">
             tap a side to put your name on it, tap again to erase. picks lock at kickoff.
@@ -164,4 +166,25 @@ function Empty({ children }: { children: React.ReactNode }) {
       <CardContent className="flex flex-col items-center py-8 text-center text-muted-foreground">{children}</CardContent>
     </Card>
   );
+}
+
+// the rule in fill_missed_picks (migration 0036): if you made none of your own
+// picks last week, the coin won't cover you this week. same exemptions: first
+// week of the season, new members, and anything before week 12 of 2026.
+const COIN_RULE_START = new Date("2026-11-25T00:00:00Z").getTime();
+function coinlessThisWeek(season: Awaited<ReturnType<typeof getSeasonData>>, idx: number, members: Profile[]) {
+  const prev = idx > 0 ? season.weeks[idx - 1] : null;
+  if (!prev) return [];
+  const prevGames = season.games.filter((g) => g.week_id === prev.id);
+  if (!prevGames.length) return [];
+  const prevFirst = Math.min(...prevGames.map((g) => new Date(g.kickoff).getTime()));
+  if (prevFirst < COIN_RULE_START) return [];
+  const prevIds = new Set(prevGames.map((g) => g.id));
+  const covered = new Set([
+    ...season.picks.filter((p) => prevIds.has(p.game_id) && !p.auto).map((p) => p.user_id),
+    ...season.adjustments.filter((a) => a.week_id === prev.id).map((a) => a.user_id),
+  ]);
+  return members
+    .filter((m) => !m.is_bot && !covered.has(m.id) && new Date(m.created_at ?? 0).getTime() <= prevFirst)
+    .map((m) => m.id);
 }

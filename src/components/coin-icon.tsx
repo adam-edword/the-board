@@ -38,3 +38,16 @@ export function CoinIcon({ className, style }: { className?: string; style?: Rea
     </svg>
   );
 }
+
+// the coin with a red slash: the coin won't cover this person's missed picks this week
+export function NoCoinIcon({ className }: { className?: string }) {
+  return (
+    <span role="img" aria-label="no coin flip this week" className={cn("relative inline-block size-[1.1em] shrink-0 align-[-0.2em]", className)}>
+      <CoinIcon className="absolute inset-0 size-full" />
+      <svg viewBox="0 0 24 24" aria-hidden className="absolute inset-0 size-full">
+        <path d="M4 20 20 4" className="stroke-background" strokeWidth={5} strokeLinecap="round" />
+        <path d="M4 20 20 4" stroke="#f87171" strokeWidth={2.2} strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
