@@ -28,22 +28,28 @@ export async function runSlatePicker() {
 
   const now = new Date();
   const { weekday, hour } = centralParts(now);
+  const db = createAdminClient();
+  // sync_state.slate_now has it make the board early (any day)
+  const { data: state } = await db.from("sync_state").select("slate_now").eq("id", 1).single();
+  const early = !!state?.slate_now;
   // tuesday 9am through saturday
-  if (weekday < 2 || weekday > 6 || (weekday === 2 && hour < 9)) return { skipped: "not tuesday yet" };
+  if (!early && (weekday < 2 || weekday > 6 || (weekday === 2 && hour < 9))) return { skipped: "not tuesday yet" };
 
-  // the weekend: thursday through monday around this week's saturday
+  // the week's games: wednesday through monday around this week's saturday
   const saturday = addDays(centralMidnight(now), 6 - weekday);
-  const from = addDays(saturday, -2);
+  const from = addDays(saturday, -3);
   const to = addDays(saturday, 3);
 
-  const db = createAdminClient();
   const { data: existing } = await db
     .from("games")
     .select("id")
     .gte("kickoff", from.toISOString())
     .lt("kickoff", to.toISOString())
     .limit(1);
-  if (existing?.length) return { skipped: "already has a board" };
+  if (existing?.length) {
+    if (early) await db.from("sync_state").update({ slate_now: false }).eq("id", 1);
+    return { skipped: "already has a board" };
+  }
 
   const { data: claimed } = await db
     .from("sync_state")
@@ -115,6 +121,7 @@ export async function runSlatePicker() {
     throw error;
   }
 
+  if (early) await db.from("sync_state").update({ slate_now: false }).eq("id", 1);
   try {
     await postToDiscord(label, rows);
   } catch (e) {
